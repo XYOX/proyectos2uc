@@ -1534,6 +1534,7 @@
                     localStorage.removeItem('access_token');
                     localStorage.removeItem('refresh_token');
                     app.currentUser = null;
+                    history.replaceState(null, '', location.pathname); // limpiar hash
                     document.getElementById('login-email').value = '';
                     document.getElementById('login-password').value = '';
                     document
@@ -1553,26 +1554,33 @@
                 // --- NAVEGACIÓN (ampliada) ---
                 buildNavigation: () => {
                     const nav = document.getElementById('nav-menu');
-                    let links = '';
+                    const base =
+                        'flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition';
 
+                    const link = (view, icon, label) => {
+                        const hash = view.replace(/^(res_|adm_)/, '');
+                        return `<a href="#${hash}" onclick="event.preventDefault();app.renderView('${view}')" class="${base}"><i class="${icon} w-5"></i> ${label}</a>`;
+                    };
+
+                    let links = '';
                     if (app.currentUser.rol === 'residente') {
                         links = `
-                        <a href="#" onclick="app.renderView('res_dashboard')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-house w-5"></i> Mi Dashboard</a>
-                        <a href="#" onclick="app.renderView('res_pagos')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-file-invoice-dollar w-5"></i> Mis Pagos</a>
-                        <a href="#" onclick="app.renderView('res_incidencias')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-triangle-exclamation w-5"></i> Incidencias</a>
-                        <a href="#" onclick="app.renderView('res_reservas')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-calendar-check w-5"></i> Reservas</a>
-                        <a href="#" onclick="app.renderView('res_anuncios')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-bullhorn w-5"></i> Anuncios</a>
-                        <a href="#" onclick="app.renderView('res_chat_historial')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-clock-rotate-left w-5"></i> Historial Chat</a>
-                    `;
+                        ${link('res_dashboard', 'fa-solid fa-house', 'Mi Dashboard')}
+                        ${link('res_pagos', 'fa-solid fa-file-invoice-dollar', 'Mis Pagos')}
+                        ${link('res_incidencias', 'fa-solid fa-triangle-exclamation', 'Incidencias')}
+                        ${link('res_reservas', 'fa-solid fa-calendar-check', 'Reservas')}
+                        ${link('res_anuncios', 'fa-solid fa-bullhorn', 'Anuncios')}
+                        ${link('res_chat_historial', 'fa-solid fa-clock-rotate-left', 'Historial Chat')}
+                        `;
                     } else {
                         links = `
-                        <a href="#" onclick="app.renderView('adm_dashboard')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-chart-pie w-5"></i> Analítica general</a>
-                        <a href="#" onclick="app.renderView('adm_pagos')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-money-check-dollar w-5"></i> Gestión de Pagos</a>
-                        <a href="#" onclick="app.renderView('adm_incidencias')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-helmet-safety w-5"></i> Panel Incidencias</a>
-                        <a href="#" onclick="app.renderView('adm_anuncios')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-bullhorn w-5"></i> Publicar Anuncios</a>
-                        <a href="#" onclick="app.renderView('adm_reportes')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-file-chart-line w-5"></i> Reportes Financieros</a>
-                        <a href="#" onclick="app.renderView('adm_solicitudes')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-user-check w-5"></i> Solicitudes Registro</a>
-                    `;
+                        ${link('adm_dashboard', 'fa-solid fa-chart-pie', 'Analítica general')}
+                        ${link('adm_pagos', 'fa-solid fa-money-check-dollar', 'Gestión de Pagos')}
+                        ${link('adm_incidencias', 'fa-solid fa-helmet-safety', 'Panel Incidencias')}
+                        ${link('adm_anuncios', 'fa-solid fa-bullhorn', 'Publicar Anuncios')}
+                        ${link('adm_reportes', 'fa-solid fa-file-chart-line', 'Reportes Financieros')}
+                        ${link('adm_solicitudes', 'fa-solid fa-user-check', 'Solicitudes Registro')}
+                        `;
                     }
                     nav.innerHTML = links;
                 },
@@ -1581,6 +1589,15 @@
                 // 4. RENDERIZADO DE VISTAS (originales)
                 // ==========================================
                 renderView: async (viewName) => {
+                    // Hash limpio sin prefijo res_/adm_
+                    const hashName = viewName.replace(/^(res_|adm_)/, '');
+                    if (location.hash !== `#${hashName}`) {
+                        history.pushState(
+                            { view: viewName },
+                            '',
+                            `#${hashName}`,
+                        );
+                    }
                     const container = document.getElementById('main-content');
                     container.innerHTML =
                         '<div class="flex justify-center items-center h-64"><i class="fa-solid fa-circle-notch fa-spin text-3xl text-primary"></i></div>';
@@ -1821,11 +1838,14 @@
 
                     // res_reservas (original)
                     if (viewName === 'res_reservas') {
-                        const [misReservas, todasReservas, areas] = await Promise.all([
-                            apiService.getReservasUsuario(app.currentUser.id),
-                            apiService.getAllReservas(),
-                            apiService.getAreas(),
-                        ]);
+                        const [misReservas, todasReservas, areas] =
+                            await Promise.all([
+                                apiService.getReservasUsuario(
+                                    app.currentUser.id,
+                                ),
+                                apiService.getAllReservas(),
+                                apiService.getAreas(),
+                            ]);
                         const reservas = misReservas;
                         const isMoroso =
                             app.currentUser.estado_financiero === 'moroso';
@@ -1853,48 +1873,87 @@
                             'Vie',
                             'Sáb',
                         ];
-                        let calendarHeader = weekDays
+                        const calendarHeader = weekDays
                             .map(
                                 (d) =>
                                     `<div class="text-center text-xs font-semibold text-slate-500 py-2">${d}</div>`,
                             )
                             .join('');
 
-                        let dayCells = '';
-                        for (let i = 0; i < firstDay; i++) {
-                            dayCells += `<div class="text-center py-2"></div>`;
-                        }
-                        const todayStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                        const primeraArea =
+                            areas.length > 0 ? areas[0].nombre : '';
+                        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-                        // Función reutilizable para generar celdas del calendario según área
-                        const buildDayCells = (areaFiltro, reservasAll, isPast_todayStr) => {
+                        // Estado global del calendario (mes navegable)
+                        window._reservasData = todasReservas;
+                        window._calMeta = {
+                            viewYear: currentYear,
+                            viewMonth: currentMonth,
+                            todayStr,
+                            todayDate: today.getDate(),
+                            todayMonth: today.getMonth(),
+                            todayYear: today.getFullYear(),
+                            isMoroso,
+                        };
+
+                        const mesesES = [
+                            'Enero',
+                            'Febrero',
+                            'Marzo',
+                            'Abril',
+                            'Mayo',
+                            'Junio',
+                            'Julio',
+                            'Agosto',
+                            'Septiembre',
+                            'Octubre',
+                            'Noviembre',
+                            'Diciembre',
+                        ];
+                        const initialLabel = `${mesesES[currentMonth]} ${currentYear}`;
+
+                        // Generar celdas iniciales
+                        const buildInitialCells = () => {
+                            const fd = new Date(
+                                currentYear,
+                                currentMonth,
+                                1,
+                            ).getDay();
+                            const dim = new Date(
+                                currentYear,
+                                currentMonth + 1,
+                                0,
+                            ).getDate();
                             let cells = '';
-                            for (let i = 0; i < firstDay; i++) cells += `<div class="text-center py-2"></div>`;
-                            for (let day = 1; day <= daysInMonth; day++) {
+                            for (let i = 0; i < fd; i++)
+                                cells += `<div class="text-center py-2"></div>`;
+                            for (let day = 1; day <= dim; day++) {
                                 const dStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                                const isRes = reservasAll.some(r => r.fecha === dStr && r.area === areaFiltro && r.estado !== 'cancelada');
-                                const past = dStr < isPast_todayStr;
-                                const isToday2 = day === today.getDate() && currentMonth === today.getMonth();
-                                const dc = past ? 'opacity-40 cursor-not-allowed' : isRes ? 'reserved' : 'available';
+                                const isRes = todasReservas.some(
+                                    (r) =>
+                                        r.fecha === dStr &&
+                                        r.area === primeraArea &&
+                                        r.estado !== 'cancelada',
+                                );
+                                const past = dStr < todayStr;
+                                const isToday2 =
+                                    day === today.getDate() &&
+                                    currentMonth === today.getMonth();
+                                const dc = past
+                                    ? 'opacity-40 cursor-not-allowed'
+                                    : isRes
+                                      ? 'reserved'
+                                      : 'available';
                                 const tc = isToday2 ? 'today' : '';
-                                const click = (!past && !isMoroso)
-                                    ? `onclick="document.getElementById('res-fecha').value='${dStr}'; document.querySelectorAll('.calendar-day').forEach(el=>el.classList.remove('ring-2','ring-primary')); this.classList.add('ring-2','ring-primary');"`
-                                    : '';
+                                const click =
+                                    !past && !isMoroso
+                                        ? `onclick="document.getElementById('res-fecha').value='${dStr}'; document.querySelectorAll('.calendar-day').forEach(el=>el.classList.remove('ring-2','ring-primary')); this.classList.add('ring-2','ring-primary');"`
+                                        : '';
                                 cells += `<div class="calendar-day ${dc} ${tc} text-center py-2 rounded text-sm font-medium transition" ${click} title="${dStr}">${day}${isRes && !past ? '<span class="block text-[8px] text-red-500">🔴</span>' : ''}</div>`;
                             }
                             return cells;
                         };
-
-                        const primeraArea = areas.length > 0 ? areas[0].nombre : '';
-                        dayCells = buildDayCells(primeraArea, todasReservas, todayStr);
-                        // Guardar datos para actualizarCalendario sin necesitar <script> en el HTML
-                        window._reservasData = todasReservas;
-                        window._calMeta = {
-                            year: currentYear, month: currentMonth,
-                            firstDay, daysInMonth,
-                            todayStr, todayDate: today.getDate(),
-                            isMoroso
-                        };
+                        const initialCells = buildInitialCells();
 
                         html = `
                         <div class="flex justify-between items-center mb-6 fade-in">
@@ -1942,13 +2001,20 @@
                             </div>
                             <div class="lg:col-span-2">
                                 <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                                    <h3 class="font-bold text-lg mb-1 text-dark">📅 Calendario de Disponibilidad (HU11)</h3>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <h3 class="font-bold text-lg text-dark">📅 Disponibilidad</h3>
+                                        <div class="flex items-center gap-2">
+                                            <button onclick="app.navegarCalendario(-1)" class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-600 transition font-bold text-lg" title="Mes anterior">‹</button>
+                                            <span id="cal-mes-label" class="text-sm font-semibold text-primary min-w-[130px] text-center">${initialLabel}</span>
+                                            <button onclick="app.navegarCalendario(1)" class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-600 transition font-bold text-lg" title="Mes siguiente">›</button>
+                                        </div>
+                                    </div>
                                     <p class="text-xs text-slate-400 mb-3">Área: <span id="cal-area-nombre" class="font-semibold text-primary">${primeraArea}</span></p>
                                     <div class="grid grid-cols-7 gap-1 mb-2">
                                         ${calendarHeader}
                                     </div>
                                     <div id="calendar-grid" class="grid grid-cols-7 gap-1">
-                                        ${dayCells}
+                                        ${initialCells}
                                     </div>
                                     <div class="flex gap-4 mt-4 text-xs">
                                         <span class="flex items-center"><span class="w-3 h-3 bg-green-100 border border-green-300 rounded mr-1"></span> Disponible</span>
@@ -2551,7 +2617,10 @@
                     const originalText = btn.innerHTML;
 
                     if (!fecha) {
-                        app.showToast('❌ Selecciona una fecha en el calendario o en el campo de fecha.', 'error');
+                        app.showToast(
+                            '❌ Selecciona una fecha en el calendario o en el campo de fecha.',
+                            'error',
+                        );
                         return;
                     }
 
@@ -2576,26 +2645,107 @@
                     const meta = window._calMeta;
                     const reservasAll = window._reservasData || [];
                     if (!meta) return;
-                    const grid = document.getElementById('calendar-grid');
                     const label = document.getElementById('cal-area-nombre');
-                    if (!grid) return;
                     if (label) label.textContent = areaNombre;
-                    // Limpiar fecha seleccionada al cambiar de área
                     const inputFecha = document.getElementById('res-fecha');
                     if (inputFecha) inputFecha.value = '';
+                    app._renderCalGrid(
+                        meta.viewYear,
+                        meta.viewMonth,
+                        areaNombre,
+                        reservasAll,
+                        meta,
+                    );
+                },
 
+                navegarCalendario: (delta) => {
+                    const meta = window._calMeta;
+                    if (!meta) return;
+                    let newMonth = meta.viewMonth + delta;
+                    let newYear = meta.viewYear;
+                    if (newMonth > 11) {
+                        newMonth = 0;
+                        newYear++;
+                    }
+                    if (newMonth < 0) {
+                        newMonth = 11;
+                        newYear--;
+                    }
+                    // No permitir ir antes del mes actual
+                    const hoyY = meta.todayYear,
+                        hoyM = meta.todayMonth;
+                    if (newYear < hoyY || (newYear === hoyY && newMonth < hoyM))
+                        return;
+                    meta.viewYear = newYear;
+                    meta.viewMonth = newMonth;
+                    const area =
+                        document.getElementById('res-area')?.value || '';
+                    const mesesES = [
+                        'Enero',
+                        'Febrero',
+                        'Marzo',
+                        'Abril',
+                        'Mayo',
+                        'Junio',
+                        'Julio',
+                        'Agosto',
+                        'Septiembre',
+                        'Octubre',
+                        'Noviembre',
+                        'Diciembre',
+                    ];
+                    const mesLabel = document.getElementById('cal-mes-label');
+                    if (mesLabel)
+                        mesLabel.textContent = `${mesesES[newMonth]} ${newYear}`;
+                    // Limpiar fecha al cambiar mes
+                    const inputFecha = document.getElementById('res-fecha');
+                    if (inputFecha) inputFecha.value = '';
+                    app._renderCalGrid(
+                        newYear,
+                        newMonth,
+                        area,
+                        window._reservasData || [],
+                        meta,
+                    );
+                },
+
+                _renderCalGrid: (
+                    year,
+                    month,
+                    areaNombre,
+                    reservasAll,
+                    meta,
+                ) => {
+                    const grid = document.getElementById('calendar-grid');
+                    if (!grid) return;
+                    const fd = new Date(year, month, 1).getDay();
+                    const dim = new Date(year, month + 1, 0).getDate();
                     let cells = '';
-                    for (let i = 0; i < meta.firstDay; i++) cells += `<div class="text-center py-2"></div>`;
-                    for (let day = 1; day <= meta.daysInMonth; day++) {
-                        const dStr = `${meta.year}-${String(meta.month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-                        const isRes = reservasAll.some(r => r.fecha === dStr && r.area === areaNombre && r.estado !== 'cancelada');
+                    for (let i = 0; i < fd; i++)
+                        cells += `<div class="text-center py-2"></div>`;
+                    for (let day = 1; day <= dim; day++) {
+                        const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                        const isRes = reservasAll.some(
+                            (r) =>
+                                r.fecha === dStr &&
+                                r.area === areaNombre &&
+                                r.estado !== 'cancelada',
+                        );
                         const past = dStr < meta.todayStr;
-                        const isToday = day === meta.todayDate && meta.month === new Date().getMonth();
-                        const dc = past ? 'opacity-40 cursor-not-allowed' : isRes ? 'reserved' : 'available';
+                        const isToday =
+                            day === meta.todayDate &&
+                            month === meta.todayMonth &&
+                            year === meta.todayYear;
+                        const dc = past
+                            ? 'opacity-40 cursor-not-allowed'
+                            : isRes
+                              ? 'reserved'
+                              : 'available';
                         const tc = isToday ? 'today' : '';
-                        const click = (!past && !meta.isMoroso)
-                            ? `onclick="document.getElementById('res-fecha').value='${dStr}'; document.querySelectorAll('.calendar-day').forEach(el=>el.classList.remove('ring-2','ring-primary')); this.classList.add('ring-2','ring-primary');"`
-                            : '';
+                        const click =
+                            !past && !meta.isMoroso
+                                ? `onclick="document.getElementById('res-fecha').value='${dStr}'; document.querySelectorAll('.calendar-day').forEach(el=>el.classList.remove('ring-2','ring-primary')); this.classList.add('ring-2','ring-primary');"`
+                                : '';
                         cells += `<div class="calendar-day ${dc} ${tc} text-center py-2 rounded text-sm font-medium transition" ${click} title="${dStr}">${day}${isRes && !past ? '<span class="block text-[8px] text-red-500">🔴</span>' : ''}</div>`;
                     }
                     grid.innerHTML = cells;
@@ -2993,6 +3143,31 @@ Generado por: ${app.currentUser?.nombre || 'Administrador'}
             // ==========================================
             // 9. INICIALIZACIÓN CON DETECCIÓN DE ENLACE
             // ==========================================
+
+            // Botón atrás/adelante del browser
+            window.addEventListener('popstate', (e) => {
+                if (!app.currentUser) return;
+                const viewName = e.state?.view;
+                if (viewName) {
+                    app.renderView(viewName);
+                } else {
+                    // Reconstruir desde hash si no hay state
+                    const hashName = location.hash.replace('#', '');
+                    const prefix =
+                        app.currentUser.rol === 'residente' ? 'res_' : 'adm_';
+                    const viewMap = {
+                        dashboard: prefix + 'dashboard',
+                        pagos: prefix + 'pagos',
+                        incidencias: prefix + 'incidencias',
+                        reservas: 'res_reservas',
+                        anuncios: prefix + 'anuncios',
+                        historial: 'res_chat_historial',
+                        reportes: 'adm_reportes',
+                        solicitudes: 'adm_solicitudes',
+                    };
+                    if (viewMap[hashName]) app.renderView(viewMap[hashName]);
+                }
+            });
             document.addEventListener('DOMContentLoaded', async () => {
                 // --- RESTAURAR SESIÓN AL RECARGAR (F5) ---
                 const accessToken = localStorage.getItem('access_token');
@@ -3000,25 +3175,45 @@ Generado por: ${app.currentUser?.nombre || 'Administrador'}
                     try {
                         // Intentar con el access token actual
                         let res = await fetch(`${API_BASE}/usuarios/me/`, {
-                            headers: { Authorization: `Bearer ${accessToken}` }
+                            headers: { Authorization: `Bearer ${accessToken}` },
                         });
 
                         // Si expiró, intentar renovar con refresh token
                         if (res.status === 401) {
-                            const refreshToken = localStorage.getItem('refresh_token');
+                            const refreshToken =
+                                localStorage.getItem('refresh_token');
                             if (refreshToken) {
-                                const refreshRes = await fetch(`${API_BASE}/auth/refresh/`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ refresh: refreshToken })
-                                });
+                                const refreshRes = await fetch(
+                                    `${API_BASE}/auth/refresh/`,
+                                    {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({
+                                            refresh: refreshToken,
+                                        }),
+                                    },
+                                );
                                 if (refreshRes.ok) {
                                     const tokens = await refreshRes.json();
-                                    localStorage.setItem('access_token', tokens.access);
-                                    if (tokens.refresh) localStorage.setItem('refresh_token', tokens.refresh);
-                                    res = await fetch(`${API_BASE}/usuarios/me/`, {
-                                        headers: { Authorization: `Bearer ${tokens.access}` }
-                                    });
+                                    localStorage.setItem(
+                                        'access_token',
+                                        tokens.access,
+                                    );
+                                    if (tokens.refresh)
+                                        localStorage.setItem(
+                                            'refresh_token',
+                                            tokens.refresh,
+                                        );
+                                    res = await fetch(
+                                        `${API_BASE}/usuarios/me/`,
+                                        {
+                                            headers: {
+                                                Authorization: `Bearer ${tokens.access}`,
+                                            },
+                                        },
+                                    );
                                 }
                             }
                         }
@@ -3026,18 +3221,42 @@ Generado por: ${app.currentUser?.nombre || 'Administrador'}
                         if (res.ok) {
                             const user = await res.json();
                             app.currentUser = user;
-                            document.getElementById('login-view').classList.add('hidden');
-                            document.getElementById('user-name').innerText = user.nombre;
-                            document.getElementById('user-role').innerText = user.rol;
-                            document.getElementById('user-avatar').innerText = user.nombre.charAt(0);
+                            document
+                                .getElementById('login-view')
+                                .classList.add('hidden');
+                            document.getElementById('user-name').innerText =
+                                user.nombre;
+                            document.getElementById('user-role').innerText =
+                                user.rol;
+                            document.getElementById('user-avatar').innerText =
+                                user.nombre.charAt(0);
                             if (user.rol === 'residente') {
-                                document.getElementById('ai-chatbot-container').classList.remove('hidden');
+                                document
+                                    .getElementById('ai-chatbot-container')
+                                    .classList.remove('hidden');
                             } else {
-                                document.getElementById('ai-chatbot-container').classList.add('hidden');
+                                document
+                                    .getElementById('ai-chatbot-container')
+                                    .classList.add('hidden');
                             }
                             app.buildNavigation();
-                            if (user.rol === 'residente') app.renderView('res_dashboard');
-                            else app.renderView('adm_dashboard');
+                            // Restaurar vista desde hash limpio (sin prefijo)
+                            const hashName = location.hash.replace('#', '');
+                            const prefix =
+                                user.rol === 'residente' ? 'res_' : 'adm_';
+                            const viewMap = {
+                                dashboard: prefix + 'dashboard',
+                                pagos: prefix + 'pagos',
+                                incidencias: prefix + 'incidencias',
+                                reservas: 'res_reservas',
+                                anuncios: prefix + 'anuncios',
+                                historial: 'res_chat_historial',
+                                reportes: 'adm_reportes',
+                                solicitudes: 'adm_solicitudes',
+                            };
+                            const defaultView = prefix + 'dashboard';
+                            const targetView = viewMap[hashName] || defaultView;
+                            app.renderView(targetView);
                         } else {
                             localStorage.removeItem('access_token');
                             localStorage.removeItem('refresh_token');
