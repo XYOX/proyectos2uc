@@ -1821,10 +1821,12 @@
 
                     // res_reservas (original)
                     if (viewName === 'res_reservas') {
-                        const reservas = await apiService.getReservasUsuario(
-                            app.currentUser.id,
-                        );
-                        const areas = await apiService.getAreas();
+                        const [misReservas, todasReservas, areas] = await Promise.all([
+                            apiService.getReservasUsuario(app.currentUser.id),
+                            apiService.getAllReservas(),
+                            apiService.getAreas(),
+                        ]);
+                        const reservas = misReservas;
                         const isMoroso =
                             app.currentUser.estado_financiero === 'moroso';
 
@@ -1862,27 +1864,37 @@
                         for (let i = 0; i < firstDay; i++) {
                             dayCells += `<div class="text-center py-2"></div>`;
                         }
-                        for (let day = 1; day <= daysInMonth; day++) {
-                            const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                            const isReserved = reservas.some(
-                                (r) =>
-                                    r.fecha === dateStr &&
-                                    r.estado !== 'cancelada',
-                            );
-                            const isToday =
-                                day === today.getDate() &&
-                                currentMonth === today.getMonth();
-                            const dayClass = isReserved
-                                ? 'reserved'
-                                : 'available';
-                            const todayClass = isToday ? 'today' : '';
-                            dayCells += `
-                            <div class="calendar-day ${dayClass} ${todayClass} text-center py-2 rounded text-sm font-medium transition">
-                                ${day}
-                                ${isReserved ? '<span class="block text-[8px] text-red-500">🔴</span>' : ''}
-                            </div>
-                        `;
-                        }
+                        const todayStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+                        // Función reutilizable para generar celdas del calendario según área
+                        const buildDayCells = (areaFiltro, reservasAll, isPast_todayStr) => {
+                            let cells = '';
+                            for (let i = 0; i < firstDay; i++) cells += `<div class="text-center py-2"></div>`;
+                            for (let day = 1; day <= daysInMonth; day++) {
+                                const dStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                                const isRes = reservasAll.some(r => r.fecha === dStr && r.area === areaFiltro && r.estado !== 'cancelada');
+                                const past = dStr < isPast_todayStr;
+                                const isToday2 = day === today.getDate() && currentMonth === today.getMonth();
+                                const dc = past ? 'opacity-40 cursor-not-allowed' : isRes ? 'reserved' : 'available';
+                                const tc = isToday2 ? 'today' : '';
+                                const click = (!past && !isMoroso)
+                                    ? `onclick="document.getElementById('res-fecha').value='${dStr}'; document.querySelectorAll('.calendar-day').forEach(el=>el.classList.remove('ring-2','ring-primary')); this.classList.add('ring-2','ring-primary');"`
+                                    : '';
+                                cells += `<div class="calendar-day ${dc} ${tc} text-center py-2 rounded text-sm font-medium transition" ${click} title="${dStr}">${day}${isRes && !past ? '<span class="block text-[8px] text-red-500">🔴</span>' : ''}</div>`;
+                            }
+                            return cells;
+                        };
+
+                        const primeraArea = areas.length > 0 ? areas[0].nombre : '';
+                        dayCells = buildDayCells(primeraArea, todasReservas, todayStr);
+                        // Guardar datos para actualizarCalendario sin necesitar <script> en el HTML
+                        window._reservasData = todasReservas;
+                        window._calMeta = {
+                            year: currentYear, month: currentMonth,
+                            firstDay, daysInMonth,
+                            todayStr, todayDate: today.getDate(),
+                            isMoroso
+                        };
 
                         html = `
                         <div class="flex justify-between items-center mb-6 fade-in">
@@ -1913,8 +1925,8 @@
                                     <form onsubmit="app.handleSubirReserva(event)" class="space-y-4">
                                         <div>
                                             <label class="block text-sm font-medium text-dark mb-1">Área Común (HU11)</label>
-                                            <select id="res-area" ${isMoroso ? 'disabled' : ''} class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent disabled:bg-slate-100">
-                                                ${areas.map((a) => `<option value="${a.nombre}">${a.nombre} (Cap: ${a.capacity})</option>`).join('')}
+                                            <select id="res-area" ${isMoroso ? 'disabled' : ''} onchange="app.actualizarCalendario(this.value)" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent disabled:bg-slate-100">
+                                                ${areas.map((a) => `<option value="${a.nombre}">${a.nombre} (Cap: ${a.capacidad})</option>`).join('')}
                                             </select>
                                         </div>
                                         <div>
@@ -1930,17 +1942,20 @@
                             </div>
                             <div class="lg:col-span-2">
                                 <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                                    <h3 class="font-bold text-lg mb-4 text-dark">📅 Calendario de Disponibilidad (HU11)</h3>
+                                    <h3 class="font-bold text-lg mb-1 text-dark">📅 Calendario de Disponibilidad (HU11)</h3>
+                                    <p class="text-xs text-slate-400 mb-3">Área: <span id="cal-area-nombre" class="font-semibold text-primary">${primeraArea}</span></p>
                                     <div class="grid grid-cols-7 gap-1 mb-2">
                                         ${calendarHeader}
                                     </div>
-                                    <div class="grid grid-cols-7 gap-1">
+                                    <div id="calendar-grid" class="grid grid-cols-7 gap-1">
                                         ${dayCells}
                                     </div>
                                     <div class="flex gap-4 mt-4 text-xs">
                                         <span class="flex items-center"><span class="w-3 h-3 bg-green-100 border border-green-300 rounded mr-1"></span> Disponible</span>
                                         <span class="flex items-center"><span class="w-3 h-3 bg-red-100 border border-red-300 rounded mr-1"></span> Reservado</span>
                                         <span class="flex items-center"><span class="w-3 h-3 border-2 border-blue-500 rounded mr-1"></span> Hoy</span>
+                                    </div>
+                                </div>
                                     </div>
                                 </div>
 
@@ -2534,6 +2549,12 @@
                     const fecha = document.getElementById('res-fecha').value;
                     const btn = e.target.querySelector('button');
                     const originalText = btn.innerHTML;
+
+                    if (!fecha) {
+                        app.showToast('❌ Selecciona una fecha en el calendario o en el campo de fecha.', 'error');
+                        return;
+                    }
+
                     btn.innerHTML =
                         '<i class="fa-solid fa-circle-notch fa-spin"></i> Validando...';
 
@@ -2546,9 +2567,38 @@
                         app.showToast('✅ Reserva confirmada con éxito.');
                         app.renderView('res_reservas');
                     } catch (err) {
-                        app.showToast(err, 'error');
+                        app.showToast(`❌ ${err}`, 'error');
                         btn.innerHTML = originalText;
                     }
+                },
+
+                actualizarCalendario: (areaNombre) => {
+                    const meta = window._calMeta;
+                    const reservasAll = window._reservasData || [];
+                    if (!meta) return;
+                    const grid = document.getElementById('calendar-grid');
+                    const label = document.getElementById('cal-area-nombre');
+                    if (!grid) return;
+                    if (label) label.textContent = areaNombre;
+                    // Limpiar fecha seleccionada al cambiar de área
+                    const inputFecha = document.getElementById('res-fecha');
+                    if (inputFecha) inputFecha.value = '';
+
+                    let cells = '';
+                    for (let i = 0; i < meta.firstDay; i++) cells += `<div class="text-center py-2"></div>`;
+                    for (let day = 1; day <= meta.daysInMonth; day++) {
+                        const dStr = `${meta.year}-${String(meta.month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                        const isRes = reservasAll.some(r => r.fecha === dStr && r.area === areaNombre && r.estado !== 'cancelada');
+                        const past = dStr < meta.todayStr;
+                        const isToday = day === meta.todayDate && meta.month === new Date().getMonth();
+                        const dc = past ? 'opacity-40 cursor-not-allowed' : isRes ? 'reserved' : 'available';
+                        const tc = isToday ? 'today' : '';
+                        const click = (!past && !meta.isMoroso)
+                            ? `onclick="document.getElementById('res-fecha').value='${dStr}'; document.querySelectorAll('.calendar-day').forEach(el=>el.classList.remove('ring-2','ring-primary')); this.classList.add('ring-2','ring-primary');"`
+                            : '';
+                        cells += `<div class="calendar-day ${dc} ${tc} text-center py-2 rounded text-sm font-medium transition" ${click} title="${dStr}">${day}${isRes && !past ? '<span class="block text-[8px] text-red-500">🔴</span>' : ''}</div>`;
+                    }
+                    grid.innerHTML = cells;
                 },
 
                 handleCrearAnuncio: async (e) => {
@@ -2943,7 +2993,60 @@ Generado por: ${app.currentUser?.nombre || 'Administrador'}
             // ==========================================
             // 9. INICIALIZACIÓN CON DETECCIÓN DE ENLACE
             // ==========================================
-            document.addEventListener('DOMContentLoaded', () => {
+            document.addEventListener('DOMContentLoaded', async () => {
+                // --- RESTAURAR SESIÓN AL RECARGAR (F5) ---
+                const accessToken = localStorage.getItem('access_token');
+                if (accessToken) {
+                    try {
+                        // Intentar con el access token actual
+                        let res = await fetch(`${API_BASE}/usuarios/me/`, {
+                            headers: { Authorization: `Bearer ${accessToken}` }
+                        });
+
+                        // Si expiró, intentar renovar con refresh token
+                        if (res.status === 401) {
+                            const refreshToken = localStorage.getItem('refresh_token');
+                            if (refreshToken) {
+                                const refreshRes = await fetch(`${API_BASE}/auth/refresh/`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ refresh: refreshToken })
+                                });
+                                if (refreshRes.ok) {
+                                    const tokens = await refreshRes.json();
+                                    localStorage.setItem('access_token', tokens.access);
+                                    if (tokens.refresh) localStorage.setItem('refresh_token', tokens.refresh);
+                                    res = await fetch(`${API_BASE}/usuarios/me/`, {
+                                        headers: { Authorization: `Bearer ${tokens.access}` }
+                                    });
+                                }
+                            }
+                        }
+
+                        if (res.ok) {
+                            const user = await res.json();
+                            app.currentUser = user;
+                            document.getElementById('login-view').classList.add('hidden');
+                            document.getElementById('user-name').innerText = user.nombre;
+                            document.getElementById('user-role').innerText = user.rol;
+                            document.getElementById('user-avatar').innerText = user.nombre.charAt(0);
+                            if (user.rol === 'residente') {
+                                document.getElementById('ai-chatbot-container').classList.remove('hidden');
+                            } else {
+                                document.getElementById('ai-chatbot-container').classList.add('hidden');
+                            }
+                            app.buildNavigation();
+                            if (user.rol === 'residente') app.renderView('res_dashboard');
+                            else app.renderView('adm_dashboard');
+                        } else {
+                            localStorage.removeItem('access_token');
+                            localStorage.removeItem('refresh_token');
+                        }
+                    } catch (e) {
+                        localStorage.removeItem('access_token');
+                        localStorage.removeItem('refresh_token');
+                    }
+                }
                 console.log(
                     '🚀 Sistema Iniciado - 100% de Historias de Usuario',
                 );

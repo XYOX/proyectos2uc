@@ -1,5 +1,5 @@
-from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.db import models
 
 
 class UsuarioManager(BaseUserManager):
@@ -43,7 +43,6 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     tipo_documento = models.CharField(max_length=30, choices=TIPO_DOCUMENTO_CHOICES)
     numero_documento = models.TextField(unique=True)
     fecha_nacimiento = models.DateField()
-    # is_active reemplaza a 'activo'; is_staff permite acceso al admin de Django
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 

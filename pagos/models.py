@@ -33,7 +33,7 @@ class Pago(models.Model):
     monto = models.FloatField()
     fecha_pago = models.DateField()
     numero_operacion = models.TextField(null=True, blank=True)
-    comprobante_url = models.TextField(null=True, blank=True)
+    comprobante_url = models.FileField(upload_to='comprobantes/', null=True, blank=True)
     estado = models.CharField(max_length=10, choices=ESTADO_CHOICES)
     fecha_validacion = models.DateTimeField(null=True, blank=True)
     observacion_validacion = models.TextField(null=True, blank=True)
