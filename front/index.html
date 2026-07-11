@@ -1,0 +1,3025 @@
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Condominio IA - Plataforma de Administración</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+        />
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            primary: '#1e40af',
+                            secondary: '#3b82f6',
+                            accent: '#10b981',
+                            dark: '#1e293b',
+                            light: '#f8fafc',
+                        },
+                    },
+                },
+            };
+        </script>
+        <style>
+            .fade-in {
+                animation: fadeIn 0.3s ease-in-out;
+            }
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            .no-scrollbar::-webkit-scrollbar {
+                display: none;
+            }
+            .no-scrollbar {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+            .timeline-item {
+                border-left: 3px solid #3b82f6;
+                padding-left: 1rem;
+                margin-bottom: 0.75rem;
+            }
+            .timeline-item:last-child {
+                border-left-color: #10b981;
+            }
+            .login-card {
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(10px);
+            }
+
+            .dark body {
+                background: #0f172a;
+                color: #e2e8f0;
+            }
+            .dark .bg-white {
+                background: #1e293b !important;
+            }
+            .dark .bg-slate-50 {
+                background: #0f172a !important;
+            }
+            .dark .bg-slate-100 {
+                background: #0f172a !important;
+            }
+            .dark .border-slate-200 {
+                border-color: #334155 !important;
+            }
+            .dark .text-slate-600 {
+                color: #94a3b8 !important;
+            }
+            .dark .text-slate-500 {
+                color: #64748b !important;
+            }
+            .dark .text-dark {
+                color: #f1f5f9 !important;
+            }
+            .dark .bg-slate-800 {
+                background: #1e293b !important;
+            }
+            .dark .bg-slate-700 {
+                background: #334155 !important;
+            }
+            .dark .hover\:bg-slate-800:hover {
+                background: #334155 !important;
+            }
+            .dark .shadow-sm {
+                box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.5) !important;
+            }
+            .dark .login-card {
+                background: rgba(30, 41, 59, 0.95);
+            }
+            .dark .badge-anuncio {
+                background: linear-gradient(135deg, #1e40af, #3b82f6);
+            }
+
+            .demo-highlight {
+                animation: highlightPulse 1.5s ease-in-out 3;
+                box-shadow:
+                    0 0 0 4px #3b82f6,
+                    0 0 20px rgba(59, 130, 246, 0.3);
+            }
+            @keyframes highlightPulse {
+                0%,
+                100% {
+                    transform: scale(1);
+                }
+                50% {
+                    transform: scale(1.02);
+                }
+            }
+
+            .demo-badge {
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: linear-gradient(135deg, #1e40af, #3b82f6);
+                color: white;
+                padding: 8px 20px;
+                border-radius: 9999px;
+                font-size: 12px;
+                font-weight: 600;
+                z-index: 100;
+                box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+                animation: pulse 2s infinite;
+            }
+            @keyframes pulse {
+                0%,
+                100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.7;
+                }
+            }
+
+            .calendar-day {
+                transition: all 0.2s;
+                cursor: pointer;
+            }
+            .calendar-day:hover {
+                background: #e2e8f0;
+                transform: scale(1.05);
+            }
+            .calendar-day.reserved {
+                background: #fef2f2;
+                color: #dc2626;
+            }
+            .calendar-day.available {
+                background: #f0fdf4;
+                color: #16a34a;
+            }
+            .calendar-day.today {
+                border: 2px solid #3b82f6;
+            }
+            .dark .calendar-day:hover {
+                background: #334155;
+            }
+            .dark .calendar-day.reserved {
+                background: #7f1d1d;
+                color: #fca5a5;
+            }
+            .dark .calendar-day.available {
+                background: #14532d;
+                color: #86efac;
+            }
+
+            .stat-number {
+                font-size: 2.5rem;
+                font-weight: 700;
+                background: linear-gradient(135deg, #1e40af, #3b82f6);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+        </style>
+    </head>
+    <body
+        class="bg-slate-100 text-slate-800 font-sans antialiased h-screen flex overflow-hidden transition-colors duration-300"
+    >
+        <div id="demo-badge" class="demo-badge hidden">
+            <i class="fa-solid fa-play mr-2"></i> Modo Demo Activo
+        </div>
+
+        <div
+            id="toast-container"
+            class="fixed top-5 right-5 z-50 flex flex-col gap-2"
+        ></div>
+
+        <!-- PANTALLA DE LOGIN / REGISTRO -->
+        <div
+            id="login-view"
+            class="fixed inset-0 bg-gradient-to-br from-blue-900 via-blue-700 to-blue-500 flex justify-center items-center z-40 transition-opacity overflow-y-auto"
+        >
+            <div
+                class="login-card p-8 rounded-2xl shadow-2xl max-w-md w-full m-4 fade-in border border-blue-100 relative"
+            >
+                <div class="absolute top-2 right-2 flex gap-1">
+                    <span
+                        class="bg-purple-500 text-white text-[10px] px-2 py-0.5 rounded-full animate-pulse"
+                        ><i class="fa-solid fa-robot mr-1"></i> IA</span
+                    >
+                    <span
+                        class="bg-green-500 text-white text-[10px] px-2 py-0.5 rounded-full animate-pulse"
+                        >Scrum</span
+                    >
+                    <span
+                        class="bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded-full animate-pulse"
+                        >v2.0</span
+                    >
+                </div>
+
+                <div class="text-center mb-6">
+                    <div
+                        class="w-20 h-20 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg"
+                    >
+                        <i
+                            class="fa-solid fa-building-user text-4xl text-white"
+                        ></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-dark">
+                        Condominio Inteligente
+                    </h1>
+                    <p class="text-slate-500 text-sm mt-2">
+                        Plataforma de Administración (Scrum - 100% HUs)
+                    </p>
+                </div>
+
+                <!-- Pestañas -->
+                <div class="flex border-b border-slate-200 mb-6">
+                    <button
+                        onclick="app.mostrarLogin()"
+                        id="tab-login"
+                        class="flex-1 py-2 text-center font-medium text-primary border-b-2 border-primary transition"
+                    >
+                        Iniciar Sesión
+                    </button>
+                    <button
+                        onclick="app.mostrarRegistro()"
+                        id="tab-registro"
+                        class="flex-1 py-2 text-center font-medium text-slate-400 hover:text-slate-600 transition"
+                    >
+                        Registrarse
+                    </button>
+                </div>
+
+                <!-- Formulario Login (original) -->
+                <form
+                    id="form-login"
+                    onsubmit="app.handleLogin(event)"
+                    class="space-y-4"
+                >
+                    <div>
+                        <label class="block text-sm font-medium text-dark mb-1"
+                            >Correo Electrónico</label
+                        >
+                        <div class="relative">
+                            <div
+                                class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+                            >
+                                <i
+                                    class="fa-solid fa-envelope text-slate-400"
+                                ></i>
+                            </div>
+                            <input
+                                type="email"
+                                id="login-email"
+                                value="bhuaman@condo.pe"
+                                required
+                                class="w-full border border-slate-300 rounded-lg pl-10 pr-3 py-3 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-dark mb-1"
+                            >Contraseña</label
+                        >
+                        <div class="relative">
+                            <div
+                                class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+                            >
+                                <i class="fa-solid fa-lock text-slate-400"></i>
+                            </div>
+                            <input
+                                type="password"
+                                id="login-password"
+                                value="123"
+                                required
+                                class="w-full border border-slate-300 rounded-lg pl-10 pr-3 py-3 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+                            />
+                        </div>
+                    </div>
+                    <button
+                        type="submit"
+                        id="btn-login"
+                        class="w-full bg-gradient-to-r from-primary to-secondary hover:from-blue-700 hover:to-blue-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl"
+                    >
+                        <i class="fa-solid fa-right-to-bracket"></i> Iniciar
+                        Sesión
+                    </button>
+                </form>
+
+                <!-- Formulario Registro (ACTUALIZADO) -->
+                <form
+                    id="form-registro"
+                    onsubmit="app.handleRegistro(event)"
+                    class="space-y-4 hidden"
+                >
+                    <!-- Fila: Nombres y Apellidos -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-dark mb-1"
+                                >Nombres</label
+                            >
+                            <input
+                                type="text"
+                                id="reg-nombres"
+                                required
+                                class="w-full border border-slate-300 rounded-lg px-3 py-3 focus:ring-2 focus:ring-primary outline-none transition"
+                            />
+                        </div>
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-dark mb-1"
+                                >Apellidos</label
+                            >
+                            <input
+                                type="text"
+                                id="reg-apellidos"
+                                required
+                                class="w-full border border-slate-300 rounded-lg px-3 py-3 focus:ring-2 focus:ring-primary outline-none transition"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-dark mb-1"
+                            >Correo Electrónico</label
+                        >
+                        <input
+                            type="email"
+                            id="reg-email"
+                            required
+                            class="w-full border border-slate-300 rounded-lg px-3 py-3 focus:ring-2 focus:ring-primary outline-none transition"
+                        />
+                    </div>
+
+                    <!-- Fila: Nacionalidad y Tipo de Documento -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-dark mb-1"
+                                >Nacionalidad</label
+                            >
+                            <select
+                                id="reg-nacionalidad"
+                                class="w-full border border-slate-300 rounded-lg px-3 py-3 focus:ring-2 focus:ring-primary outline-none transition"
+                            >
+                                <option value="peruana">Peruana</option>
+                                <option value="extranjero">Extranjero</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-dark mb-1"
+                                id="tipo-doc-label"
+                                >DNI</label
+                            >
+                            <input
+                                type="text"
+                                id="reg-documento"
+                                required
+                                placeholder="Ej: 12345678"
+                                class="w-full border border-slate-300 rounded-lg px-3 py-3 focus:ring-2 focus:ring-primary outline-none transition"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-dark mb-1"
+                            >Fecha de Nacimiento</label
+                        >
+                        <input
+                            type="date"
+                            id="reg-fecha_nac"
+                            required
+                            class="w-full border border-slate-300 rounded-lg px-3 py-3 focus:ring-2 focus:ring-primary outline-none transition"
+                        />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-dark mb-1"
+                            >Número de Departamento</label
+                        >
+                        <input
+                            type="text"
+                            id="reg-dpto"
+                            placeholder="Ej: 101"
+                            class="w-full border border-slate-300 rounded-lg px-3 py-3 focus:ring-2 focus:ring-primary outline-none transition"
+                        />
+                        <p class="text-xs text-slate-400 mt-1">
+                            Opcional si usas código de invitación
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-dark mb-1"
+                            >Teléfono</label
+                        >
+                        <input
+                            type="tel"
+                            id="reg-telefono"
+                            placeholder="Ej: 987654321"
+                            class="w-full border border-slate-300 rounded-lg px-3 py-3 focus:ring-2 focus:ring-primary outline-none transition"
+                        />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-dark mb-1"
+                            >Código de Invitación</label
+                        >
+                        <input
+                            type="text"
+                            id="reg-codigo"
+                            placeholder="Ej: CONDO-ABC123"
+                            class="w-full border border-slate-300 rounded-lg px-3 py-3 focus:ring-2 focus:ring-primary outline-none transition"
+                        />
+                        <p class="text-xs text-slate-400 mt-1">
+                            Si tienes un enlace de invitación, el código se
+                            rellenará automáticamente.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-dark mb-1"
+                            >Contraseña</label
+                        >
+                        <input
+                            type="password"
+                            id="reg-password"
+                            required
+                            minlength="6"
+                            class="w-full border border-slate-300 rounded-lg px-3 py-3 focus:ring-2 focus:ring-primary outline-none transition"
+                        />
+                        <p class="text-xs text-slate-400 mt-1">
+                            Mínimo 6 caracteres
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-dark mb-1"
+                            >Confirmar Contraseña</label
+                        >
+                        <input
+                            type="password"
+                            id="reg-password2"
+                            required
+                            class="w-full border border-slate-300 rounded-lg px-3 py-3 focus:ring-2 focus:ring-primary outline-none transition"
+                        />
+                    </div>
+
+                    <button
+                        type="submit"
+                        id="btn-registro"
+                        class="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 shadow-lg flex items-center justify-center gap-2"
+                    >
+                        <i class="fa-solid fa-user-plus"></i> Registrarse
+                    </button>
+                </form>
+
+                <div
+                    id="login-error"
+                    class="hidden mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2"
+                >
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span id="login-error-message"
+                        >Credenciales incorrectas</span
+                    >
+                </div>
+
+                <div class="mt-6 border-t border-slate-200 pt-6">
+                    <p
+                        class="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wider text-center"
+                    >
+                        🔑 Credenciales de Prueba
+                    </p>
+                    <div class="space-y-2">
+                        <button
+                            type="button"
+                            onclick="app.fillLogin('bhuaman@condo.pe', '123')"
+                            class="w-full text-left text-sm bg-blue-50 hover:bg-blue-100 text-primary py-2.5 px-3 rounded-lg flex justify-between items-center transition border border-blue-100"
+                        >
+                            <span
+                                ><i class="fa-solid fa-user mr-2"></i> Residente
+                                (Al día)</span
+                            >
+                            <span class="text-xs text-slate-400"
+                                >bhuaman@condo.pe / 123</span
+                            >
+                        </button>
+                        <button
+                            type="button"
+                            onclick="app.fillLogin('imacuri@condo.pe', '123')"
+                            class="w-full text-left text-sm bg-red-50 hover:bg-red-100 text-red-700 py-2.5 px-3 rounded-lg flex justify-between items-center transition border border-red-100"
+                        >
+                            <span
+                                ><i class="fa-solid fa-user-xmark mr-2"></i>
+                                Residente (Moroso)</span
+                            >
+                            <span class="text-xs text-slate-400"
+                                >imacuri@condo.pe / 123</span
+                            >
+                        </button>
+                        <button
+                            type="button"
+                            onclick="app.fillLogin('admin@condo.pe', 'admin')"
+                            class="w-full text-left text-sm bg-slate-800 hover:bg-slate-700 text-white py-2.5 px-3 rounded-lg flex justify-between items-center transition border border-slate-700"
+                        >
+                            <span
+                                ><i class="fa-solid fa-user-tie mr-2"></i>
+                                Administrador</span
+                            >
+                            <span class="text-xs text-slate-400"
+                                >admin@condo.pe / admin</span
+                            >
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Botón Demo (original) -->
+                <div class="mt-4">
+                    <button
+                        type="button"
+                        onclick="app.iniciarDemo()"
+                        class="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl"
+                    >
+                        <i class="fa-solid fa-play"></i> Ver Demo Automática (5
+                        min)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SIDEBAR (original) -->
+        <aside
+            id="sidebar"
+            class="w-64 bg-dark text-slate-300 flex-shrink-0 hidden md:flex flex-col h-full shadow-xl transition-all duration-300 z-20 absolute md:relative -left-64 md:left-0"
+        >
+            <div class="p-6 flex items-center justify-between bg-slate-900">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-building text-secondary text-2xl"></i>
+                    <span class="text-white font-bold text-lg tracking-wide"
+                        >CondoAI</span
+                    >
+                </div>
+                <button
+                    onclick="app.toggleMobileMenu()"
+                    class="md:hidden text-slate-300 hover:text-white"
+                >
+                    <i class="fa-solid fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div class="p-6 border-b border-slate-700">
+                <p
+                    class="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1"
+                >
+                    Usuario Actual
+                </p>
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-10 h-10 rounded-full bg-gradient-to-r from-secondary to-primary flex items-center justify-center text-white font-bold"
+                        id="user-avatar"
+                    >
+                        ?
+                    </div>
+                    <div>
+                        <p class="text-white font-medium" id="user-name">
+                            Cargando...
+                        </p>
+                        <p
+                            class="text-xs text-slate-400 capitalize"
+                            id="user-role"
+                        >
+                            ...
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <nav
+                class="flex-1 py-4 px-3 space-y-1 overflow-y-auto no-scrollbar"
+                id="nav-menu"
+            ></nav>
+
+            <div class="p-4 border-t border-slate-700 space-y-2">
+                <button
+                    onclick="app.toggleDarkMode()"
+                    class="flex items-center gap-3 w-full px-4 py-2 text-sm font-medium rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+                >
+                    <i class="fa-solid fa-moon"></i>
+                    <span id="dark-mode-text">Modo Oscuro</span>
+                </button>
+                <button
+                    onclick="app.logout()"
+                    class="flex items-center gap-3 w-full px-4 py-2 text-sm font-medium rounded-lg text-red-400 hover:bg-slate-800 hover:text-red-300 transition-colors"
+                >
+                    <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT (original) -->
+        <main class="flex-1 flex flex-col h-full relative w-full">
+            <header
+                class="bg-white shadow-sm h-16 flex items-center justify-between px-4 md:hidden shrink-0 z-10"
+            >
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-building text-primary text-xl"></i>
+                    <span class="font-bold text-dark">CondoAI</span>
+                </div>
+                <button
+                    onclick="app.toggleMobileMenu()"
+                    class="text-slate-600 hover:text-primary p-2"
+                >
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+            </header>
+
+            <div
+                id="main-content"
+                class="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-100 transition-colors duration-300"
+            ></div>
+
+            <!-- CHATBOT (original) -->
+            <div
+                id="ai-chatbot-container"
+                class="fixed bottom-6 right-6 z-50 hidden md:block"
+            >
+                <button
+                    onclick="app.toggleChatbot()"
+                    class="bg-dark hover:bg-slate-700 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-105"
+                >
+                    <i class="fa-solid fa-robot text-2xl"></i>
+                </button>
+
+                <div
+                    id="chatbot-window"
+                    class="hidden absolute bottom-16 right-0 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden transition-all transform origin-bottom-right h-96"
+                >
+                    <div
+                        class="bg-gradient-to-r from-dark to-slate-800 p-4 flex justify-between items-center text-white"
+                    >
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-robot text-secondary"></i>
+                            <span class="font-bold">CondoAI Assistant</span>
+                            <span
+                                class="bg-purple-500 text-white text-[8px] px-1.5 py-0.5 rounded-full"
+                                >IA</span
+                            >
+                        </div>
+                        <button
+                            onclick="app.toggleChatbot()"
+                            class="text-slate-300 hover:text-white"
+                        >
+                            <i class="fa-solid fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div
+                        id="chatbot-messages"
+                        class="flex-1 p-4 overflow-y-auto bg-slate-50 space-y-3 text-sm flex flex-col"
+                    >
+                        <div class="flex gap-2 w-5/6">
+                            <div
+                                class="w-6 h-6 rounded-full bg-dark text-white flex flex-shrink-0 items-center justify-center text-xs"
+                            >
+                                <i class="fa-solid fa-robot"></i>
+                            </div>
+                            <div
+                                class="bg-white p-2 rounded-lg border border-slate-200 shadow-sm text-slate-700 rounded-tl-none"
+                            >
+                                Hola. Soy tu asistente de IA. He sido entrenado
+                                con el Reglamento Interno del Condominio. ¿En
+                                qué te puedo ayudar?
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        class="p-3 bg-white border-t border-slate-200 flex gap-2"
+                    >
+                        <input
+                            type="text"
+                            id="chatbot-input"
+                            onkeypress="
+                                if (event.key === 'Enter')
+                                    app.sendChatMessage();
+                            "
+                            placeholder="Pregunta sobre las reglas..."
+                            class="flex-1 border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-primary outline-none"
+                        />
+                        <button
+                            onclick="app.sendChatMessage()"
+                            class="bg-primary text-white w-9 h-9 rounded-lg flex items-center justify-center hover:bg-blue-700 transition"
+                        >
+                            <i class="fa-solid fa-paper-plane text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <script>
+            // ==========================================
+            // 1. BASE DE DATOS SIMULADA (ampliada)
+            // ==========================================
+            const mockDatabase = {
+                usuarios: [
+                    {
+                        id: 1,
+                        email: 'bhuaman@condo.pe',
+                        pass: '123',
+                        nombre: 'Bryans Huaman',
+                        rol: 'residente',
+                        dpto: '101',
+                        estado_financiero: 'al_dia',
+                        deuda: 0,
+                        activo: true,
+                    },
+                    {
+                        id: 2,
+                        email: 'imacuri@condo.pe',
+                        pass: '123',
+                        nombre: 'Iomar Macuri',
+                        rol: 'residente',
+                        dpto: '202',
+                        estado_financiero: 'moroso',
+                        deuda: 150.0,
+                        activo: true,
+                    },
+                    {
+                        id: 3,
+                        email: 'admin@condo.pe',
+                        pass: 'admin',
+                        nombre: 'Christian Huamani',
+                        rol: 'administrador',
+                        dpto: 'Admin',
+                        estado_financiero: 'al_dia',
+                        deuda: 0,
+                        activo: true,
+                    },
+                ],
+                pagos: [
+                    {
+                        id: 101,
+                        residente_id: 2,
+                        monto: 150.0,
+                        fecha: '2026-06-15',
+                        estado: 'pendiente',
+                        recibo: 'recibo_transferencia.png',
+                    },
+                    {
+                        id: 102,
+                        residente_id: 1,
+                        monto: 150.0,
+                        fecha: '2026-06-01',
+                        estado: 'aprobado',
+                        recibo: 'recibo_1.png',
+                    },
+                    {
+                        id: 103,
+                        residente_id: 1,
+                        monto: 150.0,
+                        fecha: '2026-05-01',
+                        estado: 'aprobado',
+                        recibo: 'recibo_2.png',
+                    },
+                    {
+                        id: 104,
+                        residente_id: 1,
+                        monto: 150.0,
+                        fecha: '2026-04-01',
+                        estado: 'aprobado',
+                        recibo: 'recibo_3.png',
+                    },
+                ],
+                incidencias: [
+                    {
+                        id: 201,
+                        residente_id: 1,
+                        titulo: 'Foco quemado pasillo',
+                        descripcion: 'El foco del piso 1 está parpadeando.',
+                        categoria_ia: 'mantenimiento',
+                        prioridad_ia: 'baja',
+                        estado: 'nuevo',
+                        fecha: '2026-06-18',
+                        asignado_a: null,
+                        fecha_asignacion: null,
+                        timeline: [
+                            { fecha: '2026-06-18 10:30', estado: 'Reportado' },
+                        ],
+                    },
+                    {
+                        id: 202,
+                        residente_id: 1,
+                        titulo: 'Fuga de agua en el jardín',
+                        descripcion:
+                            'Hay una fuga de agua en el jardín central.',
+                        categoria_ia: 'mantenimiento',
+                        prioridad_ia: 'alta',
+                        estado: 'asignada',
+                        fecha: '2026-06-20',
+                        asignado_a: 'Juan Pérez',
+                        fecha_asignacion: '2026-06-20 14:00',
+                        timeline: [
+                            { fecha: '2026-06-20 09:00', estado: 'Reportado' },
+                            {
+                                fecha: '2026-06-20 14:00',
+                                estado: 'Asignado a Juan Pérez',
+                            },
+                        ],
+                    },
+                ],
+                reservas: [
+                    {
+                        id: 301,
+                        residente_id: 1,
+                        area: 'Zona de Parrillas',
+                        fecha: '2026-06-25',
+                        hora_inicio: '14:00',
+                        estado: 'confirmada',
+                    },
+                    {
+                        id: 302,
+                        residente_id: 1,
+                        area: 'Piscina',
+                        fecha: '2026-06-28',
+                        hora_inicio: '10:00',
+                        estado: 'confirmada',
+                    },
+                ],
+                areas: [
+                    {
+                        id: 1,
+                        nombre: 'Zona de Parrillas',
+                        capacity: 15,
+                        precio: 50,
+                    },
+                    { id: 2, nombre: 'Piscina', capacity: 30, precio: 30 },
+                    {
+                        id: 3,
+                        nombre: 'Salón de Usos Múltiples (SUM)',
+                        capacity: 80,
+                        precio: 100,
+                    },
+                ],
+                anuncios: [
+                    {
+                        id: 1,
+                        titulo: 'Bienvenida al Sistema',
+                        mensaje:
+                            'Bienvenidos al nuevo sistema de administración del condominio. Ahora pueden gestionar todo desde aquí.',
+                        fecha: '2026-06-01',
+                        autor: 'Administración',
+                    },
+                    {
+                        id: 2,
+                        titulo: 'Mantenimiento de Áreas',
+                        mensaje:
+                            'El próximo sábado 26 de junio se realizará mantenimiento en la piscina. Disculpen las molestias.',
+                        fecha: '2026-06-20',
+                        autor: 'Administración',
+                    },
+                ],
+                chatHistorial: [
+                    {
+                        id: 1,
+                        usuario: 'Bryans Huaman',
+                        mensaje: '¿Cuál es el horario de la piscina?',
+                        fecha: '2026-06-20 10:30',
+                    },
+                    {
+                        id: 2,
+                        usuario: 'Bryans Huaman',
+                        mensaje: '¿Puedo tener una mascota en el departamento?',
+                        fecha: '2026-06-20 10:32',
+                    },
+                ],
+                notificaciones: [],
+                reportes: [],
+                invitaciones: [
+                    {
+                        id: 1,
+                        codigo: 'CONDO-ABC123',
+                        dpto: '301',
+                        usado: false,
+                        creado_por: 3,
+                    },
+                    {
+                        id: 2,
+                        codigo: 'CONDO-XYZ789',
+                        dpto: '402',
+                        usado: false,
+                        creado_por: 3,
+                    },
+                ],
+                solicitudes_registro: [
+                    {
+                        id: 1,
+                        nombre: 'Ana García',
+                        email: 'ana@condo.pe',
+                        dpto: '501',
+                        telefono: '987654321',
+                        estado: 'pendiente',
+                        fecha: '2026-07-07 10:00',
+                        motivo_rechazo: null,
+                    },
+                ],
+            };
+
+            // ==========================================
+            // 2. SERVICIO API (ampliado)
+            // ==========================================
+            const API_BASE = 'http://127.0.0.1:8000/api';
+            const authFetch = (url, options = {}) => {
+                const token = localStorage.getItem('access_token');
+                return fetch(url, {
+                    ...options,
+                    headers: {
+                        ...(options.headers || {}),
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+            };
+            const apiPost = (url, body, auth = true) => {
+                const fetcher = auth ? authFetch : fetch;
+                return fetcher(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+            };
+
+            const apiService = {
+                login: async (email, password) => {
+                    const res = await fetch(`${API_BASE}/auth/login/`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok)
+                        throw (
+                            data.detail ||
+                            'Credenciales incorrectas o cuenta pendiente de aprobación.'
+                        );
+                    localStorage.setItem('access_token', data.access);
+                    localStorage.setItem('refresh_token', data.refresh);
+                    return data.user;
+                },
+
+                registrar: async (data) => {
+                    const res = await fetch(`${API_BASE}/auth/registro/`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data),
+                    });
+                    const result = await res.json();
+                    if (!res.ok)
+                        throw (
+                            result.error ||
+                            result.detail ||
+                            'Error al registrar'
+                        );
+                    return result;
+                },
+
+                getSolicitudesRegistro: async () => {
+                    const res = await authFetch(`${API_BASE}/solicitudes/`);
+                    return res.json();
+                },
+
+                aprobarSolicitud: async (id) => {
+                    const res = await authFetch(
+                        `${API_BASE}/solicitudes/${id}/aprobar/`,
+                        { method: 'PATCH' },
+                    );
+                    return res.json();
+                },
+
+                rechazarSolicitud: async (id, motivo) => {
+                    const res = await authFetch(
+                        `${API_BASE}/solicitudes/${id}/rechazar/`,
+                        {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ motivo }),
+                        },
+                    );
+                    return res.json();
+                },
+
+                generarInvitacion: async (dpto) => {
+                    const res = await authFetch(`${API_BASE}/invitaciones/`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ dpto }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok)
+                        throw data.error || 'Error al generar invitación';
+                    mockDatabase.invitaciones.push({
+                        id: data.id,
+                        codigo: data.codigo,
+                        dpto: data.dpto,
+                        usado: data.usado,
+                        creado_por: app.currentUser?.id || null,
+                    });
+                    app.showToast(
+                        `📧 Invitación generada: ${data.enlace}`,
+                        'info',
+                    );
+                    setTimeout(
+                        () =>
+                            app.showToast(`🔗 Código: ${data.codigo}`, 'info'),
+                        500,
+                    );
+                    return data;
+                },
+
+                getPagosUsuario: async (userId) => {
+                    const res = await authFetch(
+                        `${API_BASE}/pagos/?residente_id=${userId}`,
+                    );
+                    return res.json();
+                },
+
+                getAllPagosPendientes: async () => {
+                    const res = await authFetch(
+                        `${API_BASE}/pagos/pendientes/`,
+                    );
+                    return res.json();
+                },
+
+                registrarPago: async (pagoData) => {
+                    // Usa FormData para soportar archivo adjunto
+                    const form = new FormData();
+                    form.append('residente_id', pagoData.residente_id);
+                    form.append('monto', pagoData.monto);
+                    if (pagoData.comprobante)
+                        form.append('comprobante', pagoData.comprobante);
+                    const res = await authFetch(`${API_BASE}/pagos/`, {
+                        method: 'POST',
+                        body: form, // sin Content-Type: el browser lo setea con boundary
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw data.error || 'Error al registrar pago';
+                    return data;
+                },
+
+                validarPago: async (pagoId, aprobar) => {
+                    const res = await authFetch(
+                        `${API_BASE}/pagos/${pagoId}/validar/`,
+                        {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ aprobar }),
+                        },
+                    );
+                    return res.json();
+                },
+
+                getIncidenciasUsuario: async (userId) => {
+                    const res = await authFetch(
+                        `${API_BASE}/incidencias/?residente_id=${userId}`,
+                    );
+                    return res.json();
+                },
+
+                getAllIncidencias: async () => {
+                    const res = await authFetch(`${API_BASE}/incidencias/`);
+                    return res.json();
+                },
+
+                registrarIncidencia: async (incData) => {
+                    const res = await authFetch(`${API_BASE}/incidencias/`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(incData),
+                    });
+                    const data = await res.json();
+                    if (!res.ok)
+                        throw data.error || 'Error al registrar incidencia';
+                    return data;
+                },
+
+                asignarIncidencia: async (id, trabajador) => {
+                    const res = await authFetch(
+                        `${API_BASE}/incidencias/${id}/asignar/`,
+                        {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ trabajador }),
+                        },
+                    );
+                    return res.json();
+                },
+
+                cerrarIncidencia: async (id) => {
+                    const res = await authFetch(
+                        `${API_BASE}/incidencias/${id}/cerrar/`,
+                        { method: 'PATCH' },
+                    );
+                    return res.json();
+                },
+
+                getReservasUsuario: async (userId) => {
+                    const res = await authFetch(
+                        `${API_BASE}/reservas/?residente_id=${userId}`,
+                    );
+                    return res.json();
+                },
+
+                getAllReservas: async () => {
+                    const res = await authFetch(`${API_BASE}/reservas/`);
+                    return res.json();
+                },
+
+                getAreas: async () => {
+                    const res = await authFetch(`${API_BASE}/areas/`);
+                    return res.json();
+                },
+
+                registrarReserva: async (resData) => {
+                    const res = await authFetch(`${API_BASE}/reservas/`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(resData),
+                    });
+                    const data = await res.json();
+                    if (!res.ok)
+                        throw data.error || 'Error al registrar reserva';
+                    return data;
+                },
+
+                cancelarReserva: async (id) => {
+                    const res = await authFetch(
+                        `${API_BASE}/reservas/${id}/cancelar/`,
+                        { method: 'PATCH' },
+                    );
+                    return res.json();
+                },
+
+                getAnuncios: async () => {
+                    const res = await authFetch(`${API_BASE}/anuncios/`);
+                    return res.json();
+                },
+
+                crearAnuncio: async (titulo, mensaje) => {
+                    const res = await authFetch(`${API_BASE}/anuncios/`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ titulo, mensaje }),
+                    });
+                    return res.json();
+                },
+
+                generarReporteFinanciero: async () => {
+                    const res = await authFetch(
+                        `${API_BASE}/reportes/financiero/`,
+                    );
+                    const data = await res.json();
+                    mockDatabase.reportes.push(data);
+                    return data;
+                },
+
+                getChatHistorial: async () => {
+                    return JSON.parse(
+                        localStorage.getItem('chat_historial') || '[]',
+                    );
+                },
+
+                guardarChatHistorial: async (mensaje) => {
+                    const historial = JSON.parse(
+                        localStorage.getItem('chat_historial') || '[]',
+                    );
+                    const entry = {
+                        id: Date.now(),
+                        usuario: app.currentUser?.nombre || 'Anónimo',
+                        mensaje,
+                        fecha: new Date().toLocaleString(),
+                    };
+                    historial.push(entry);
+                    localStorage.setItem(
+                        'chat_historial',
+                        JSON.stringify(historial),
+                    );
+                    return entry;
+                },
+            };
+
+            // ==========================================
+            // 3. LÓGICA DE APLICACIÓN (COMPLETA)
+            // ==========================================
+            const app = {
+                currentUser: null,
+                isDarkMode: false,
+                isDemoMode: false,
+
+                // --- PESTAÑAS ---
+                mostrarLogin: function () {
+                    document
+                        .getElementById('form-login')
+                        .classList.remove('hidden');
+                    document
+                        .getElementById('form-registro')
+                        .classList.add('hidden');
+                    document.getElementById('tab-login').className =
+                        'flex-1 py-2 text-center font-medium text-primary border-b-2 border-primary transition';
+                    document.getElementById('tab-registro').className =
+                        'flex-1 py-2 text-center font-medium text-slate-400 hover:text-slate-600 transition';
+                },
+
+                mostrarRegistro: function () {
+                    document
+                        .getElementById('form-login')
+                        .classList.add('hidden');
+                    document
+                        .getElementById('form-registro')
+                        .classList.remove('hidden');
+                    document.getElementById('tab-registro').className =
+                        'flex-1 py-2 text-center font-medium text-primary border-b-2 border-primary transition';
+                    document.getElementById('tab-login').className =
+                        'flex-1 py-2 text-center font-medium text-slate-400 hover:text-slate-600 transition';
+                },
+
+                // --- TOAST ---
+                showToast: (msg, type = 'success') => {
+                    const toast = document.createElement('div');
+                    const colors =
+                        type === 'success'
+                            ? 'bg-emerald-100 border-emerald-500 text-emerald-800'
+                            : type === 'error'
+                              ? 'bg-red-100 border-red-500 text-red-800'
+                              : type === 'info'
+                                ? 'bg-blue-100 border-blue-500 text-blue-800'
+                                : 'bg-yellow-100 border-yellow-500 text-yellow-800';
+                    const icon =
+                        type === 'success'
+                            ? 'fa-check-circle'
+                            : type === 'error'
+                              ? 'fa-triangle-exclamation'
+                              : type === 'info'
+                                ? 'fa-info-circle'
+                                : 'fa-bell';
+
+                    toast.className = `flex items-center gap-3 p-4 mb-2 rounded shadow-lg border-l-4 ${colors} fade-in transform transition-all duration-300`;
+                    toast.innerHTML = `<i class="fa-solid ${icon} text-lg"></i><span class="font-medium text-sm">${msg}</span>`;
+
+                    document
+                        .getElementById('toast-container')
+                        .appendChild(toast);
+                    setTimeout(() => {
+                        toast.style.opacity = '0';
+                        setTimeout(() => toast.remove(), 300);
+                    }, 3500);
+                },
+
+                toggleMobileMenu: () => {
+                    const sidebar = document.getElementById('sidebar');
+                    if (sidebar.classList.contains('-left-64')) {
+                        sidebar.classList.remove('-left-64', 'hidden');
+                        sidebar.classList.add('left-0', 'absolute');
+                    } else {
+                        sidebar.classList.add('-left-64');
+                        setTimeout(() => sidebar.classList.add('hidden'), 300);
+                    }
+                },
+
+                toggleDarkMode: () => {
+                    app.isDarkMode = !app.isDarkMode;
+                    document.body.classList.toggle('dark');
+                    document.getElementById('dark-mode-text').textContent =
+                        app.isDarkMode ? 'Modo Claro' : 'Modo Oscuro';
+                    app.showToast(
+                        app.isDarkMode
+                            ? '🌙 Modo Oscuro Activado'
+                            : '☀️ Modo Claro Activado',
+                        'info',
+                    );
+                },
+
+                fillLogin: (email, pass) => {
+                    document.getElementById('login-email').value = email;
+                    document.getElementById('login-password').value = pass;
+                    document
+                        .getElementById('login-error')
+                        .classList.add('hidden');
+                    if (
+                        !document
+                            .getElementById('form-login')
+                            .classList.contains('hidden') === false
+                    ) {
+                        app.mostrarLogin();
+                    }
+                },
+
+                generarAlertasMorosidad: () => {
+                    const morosos = mockDatabase.usuarios.filter(
+                        (u) => u.estado_financiero === 'moroso',
+                    );
+                    morosos.forEach((usuario) => {
+                        app.showToast(
+                            `🔔 ALERTA: El residente ${usuario.nombre} (Dpto ${usuario.dpto}) presenta deuda de S/ ${usuario.deuda.toFixed(2)}`,
+                            'error',
+                        );
+                    });
+                    if (morosos.length === 0) {
+                        app.showToast(
+                            '✅ No hay residentes morosos en este momento',
+                            'success',
+                        );
+                    }
+                },
+
+                enviarNotificacion: (usuario, mensaje) => {
+                    const notificacion = {
+                        id: Date.now(),
+                        usuario,
+                        mensaje,
+                        fecha: new Date().toLocaleString(),
+                        leido: false,
+                    };
+                    mockDatabase.notificaciones.push(notificacion);
+                    app.showToast(`📬 ${mensaje}`, 'success');
+                },
+
+                // --- LOGIN ---
+                handleLogin: async (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById('login-email').value;
+                    const pass =
+                        document.getElementById('login-password').value;
+                    const btn = document.getElementById('btn-login');
+                    const errorDiv = document.getElementById('login-error');
+                    const errorMsg = document.getElementById(
+                        'login-error-message',
+                    );
+
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML =
+                        '<i class="fa-solid fa-circle-notch fa-spin"></i> Validando...';
+                    btn.disabled = true;
+                    errorDiv.classList.add('hidden');
+
+                    try {
+                        const user = await apiService.login(email, pass);
+                        app.currentUser = user;
+
+                        document
+                            .getElementById('login-view')
+                            .classList.add('hidden');
+                        document.getElementById('user-name').innerText =
+                            user.nombre;
+                        document.getElementById('user-role').innerText =
+                            user.rol;
+                        document.getElementById('user-avatar').innerText =
+                            user.nombre.charAt(0);
+
+                        if (user.rol === 'residente') {
+                            document
+                                .getElementById('ai-chatbot-container')
+                                .classList.remove('hidden');
+                        } else {
+                            document
+                                .getElementById('ai-chatbot-container')
+                                .classList.add('hidden');
+                        }
+
+                        app.buildNavigation();
+                        app.showToast(`✅ Bienvenido, ${user.nombre}`);
+
+                        if (user.rol === 'residente')
+                            app.renderView('res_dashboard');
+                        else app.renderView('adm_dashboard');
+                    } catch (errorMsgText) {
+                        errorMsg.innerText = errorMsgText;
+                        errorDiv.classList.remove('hidden');
+                        app.showToast(errorMsgText, 'error');
+                    } finally {
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }
+                },
+
+                // --- REGISTRO (ACTUALIZADO) ---
+                handleRegistro: async (e) => {
+                    e.preventDefault();
+                    const nombres = document
+                        .getElementById('reg-nombres')
+                        .value.trim();
+                    const apellidos = document
+                        .getElementById('reg-apellidos')
+                        .value.trim();
+                    const email = document
+                        .getElementById('reg-email')
+                        .value.trim();
+                    const nacionalidad =
+                        document.getElementById('reg-nacionalidad').value;
+                    const documento = document
+                        .getElementById('reg-documento')
+                        .value.trim();
+                    const fecha_nac =
+                        document.getElementById('reg-fecha_nac').value;
+                    const dpto = document
+                        .getElementById('reg-dpto')
+                        .value.trim();
+                    const telefono = document
+                        .getElementById('reg-telefono')
+                        .value.trim();
+                    const codigo = document
+                        .getElementById('reg-codigo')
+                        .value.trim();
+                    const password =
+                        document.getElementById('reg-password').value;
+                    const password2 =
+                        document.getElementById('reg-password2').value;
+
+                    // Validaciones
+                    if (nombres.length < 2) {
+                        app.showToast(
+                            '❌ Ingresa tus nombres correctamente',
+                            'error',
+                        );
+                        return;
+                    }
+                    if (apellidos.length < 2) {
+                        app.showToast(
+                            '❌ Ingresa tus apellidos correctamente',
+                            'error',
+                        );
+                        return;
+                    }
+                    if (documento.length < 8) {
+                        app.showToast(
+                            '❌ Ingresa un número de documento válido (mínimo 8 dígitos)',
+                            'error',
+                        );
+                        return;
+                    }
+                    if (!fecha_nac) {
+                        app.showToast(
+                            '❌ Ingresa tu fecha de nacimiento',
+                            'error',
+                        );
+                        return;
+                    }
+                    if (password.length < 6) {
+                        app.showToast(
+                            '❌ La contraseña debe tener al menos 6 caracteres',
+                            'error',
+                        );
+                        return;
+                    }
+                    if (password !== password2) {
+                        app.showToast(
+                            '❌ Las contraseñas no coinciden',
+                            'error',
+                        );
+                        return;
+                    }
+                    if (!email.includes('@') || !email.includes('.')) {
+                        app.showToast(
+                            '❌ Ingresa un correo electrónico válido',
+                            'error',
+                        );
+                        return;
+                    }
+
+                    const btn = document.getElementById('btn-registro');
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML =
+                        '<i class="fa-solid fa-circle-notch fa-spin"></i> Registrando...';
+                    btn.disabled = true;
+
+                    // Determinar tipo de documento según nacionalidad
+                    const tipo_documento =
+                        nacionalidad === 'peruana'
+                            ? 'DNI'
+                            : 'Carnet de Extranjería';
+
+                    try {
+                        const result = await apiService.registrar({
+                            nombres,
+                            apellidos,
+                            email,
+                            nacionalidad,
+                            tipo_documento,
+                            numero_documento: documento,
+                            fecha_nacimiento: fecha_nac,
+                            dpto,
+                            telefono,
+                            codigo,
+                            password,
+                        });
+                        app.showToast('✅ ' + result.mensaje, 'success');
+                        document.getElementById('form-registro').reset();
+                        app.mostrarLogin();
+                        document.getElementById('login-email').value = email;
+                        document.getElementById('login-password').value = '';
+                        document
+                            .getElementById('login-error')
+                            .classList.add('hidden');
+                    } catch (error) {
+                        app.showToast('❌ ' + error.message, 'error');
+                    } finally {
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }
+                },
+
+                // --- LOGOUT ---
+                logout: () => {
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                    app.currentUser = null;
+                    document.getElementById('login-email').value = '';
+                    document.getElementById('login-password').value = '';
+                    document
+                        .getElementById('login-view')
+                        .classList.remove('hidden');
+                    document
+                        .getElementById('ai-chatbot-container')
+                        .classList.add('hidden');
+                    document
+                        .getElementById('demo-badge')
+                        .classList.add('hidden');
+                    app.isDemoMode = false;
+                    app.showToast('Sesión cerrada correctamente');
+                    app.mostrarLogin();
+                },
+
+                // --- NAVEGACIÓN (ampliada) ---
+                buildNavigation: () => {
+                    const nav = document.getElementById('nav-menu');
+                    let links = '';
+
+                    if (app.currentUser.rol === 'residente') {
+                        links = `
+                        <a href="#" onclick="app.renderView('res_dashboard')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-house w-5"></i> Mi Dashboard</a>
+                        <a href="#" onclick="app.renderView('res_pagos')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-file-invoice-dollar w-5"></i> Mis Pagos</a>
+                        <a href="#" onclick="app.renderView('res_incidencias')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-triangle-exclamation w-5"></i> Incidencias</a>
+                        <a href="#" onclick="app.renderView('res_reservas')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-calendar-check w-5"></i> Reservas</a>
+                        <a href="#" onclick="app.renderView('res_anuncios')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-bullhorn w-5"></i> Anuncios</a>
+                        <a href="#" onclick="app.renderView('res_chat_historial')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-clock-rotate-left w-5"></i> Historial Chat</a>
+                    `;
+                    } else {
+                        links = `
+                        <a href="#" onclick="app.renderView('adm_dashboard')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-chart-pie w-5"></i> Analítica general</a>
+                        <a href="#" onclick="app.renderView('adm_pagos')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-money-check-dollar w-5"></i> Gestión de Pagos</a>
+                        <a href="#" onclick="app.renderView('adm_incidencias')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-helmet-safety w-5"></i> Panel Incidencias</a>
+                        <a href="#" onclick="app.renderView('adm_anuncios')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-bullhorn w-5"></i> Publicar Anuncios</a>
+                        <a href="#" onclick="app.renderView('adm_reportes')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-file-chart-line w-5"></i> Reportes Financieros</a>
+                        <a href="#" onclick="app.renderView('adm_solicitudes')" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition"><i class="fa-solid fa-user-check w-5"></i> Solicitudes Registro</a>
+                    `;
+                    }
+                    nav.innerHTML = links;
+                },
+
+                // ==========================================
+                // 4. RENDERIZADO DE VISTAS (originales)
+                // ==========================================
+                renderView: async (viewName) => {
+                    const container = document.getElementById('main-content');
+                    container.innerHTML =
+                        '<div class="flex justify-center items-center h-64"><i class="fa-solid fa-circle-notch fa-spin text-3xl text-primary"></i></div>';
+
+                    const sidebar = document.getElementById('sidebar');
+                    if (
+                        !sidebar.classList.contains('hidden') &&
+                        window.innerWidth < 768
+                    )
+                        app.toggleMobileMenu();
+
+                    let html = '';
+
+                    // --- VISTAS RESIDENTE (originales) ---
+                    if (viewName === 'res_dashboard') {
+                        const pagos = await apiService.getPagosUsuario(
+                            app.currentUser.id,
+                        );
+                        const reservas = await apiService.getReservasUsuario(
+                            app.currentUser.id,
+                        );
+                        const incidencias =
+                            await apiService.getIncidenciasUsuario(
+                                app.currentUser.id,
+                            );
+
+                        html = `
+                        <div class="flex justify-between items-center mb-6 fade-in">
+                            <h2 class="text-2xl font-bold text-dark">Mi Dashboard</h2>
+                            <span class="bg-purple-500 text-white text-xs px-3 py-1 rounded-full">
+                                <i class="fa-solid fa-robot mr-1"></i> IA Activa
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 fade-in">
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition">
+                                <p class="text-sm text-slate-500 font-medium mb-1">Estado Financiero</p>
+                                ${
+                                    app.currentUser.estado_financiero ===
+                                    'al_dia'
+                                        ? '<h3 class="text-2xl font-bold text-accent">Al Día ✅</h3>'
+                                        : `<h3 class="text-2xl font-bold text-red-600">Moroso ⚠️ (S/ ${app.currentUser.deuda})</h3>`
+                                }
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition">
+                                <p class="text-sm text-slate-500 font-medium mb-1">Departamento</p>
+                                <h3 class="text-2xl font-bold text-dark">Dpto. ${app.currentUser.dpto}</h3>
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition">
+                                <p class="text-sm text-slate-500 font-medium mb-1">Pagos Realizados</p>
+                                <h3 class="text-2xl font-bold text-dark">${pagos.length}</h3>
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition">
+                                <p class="text-sm text-slate-500 font-medium mb-1">Incidencias Activas</p>
+                                <h3 class="text-2xl font-bold text-dark">${incidencias.filter((i) => i.estado !== 'cerrada').length}</h3>
+                            </div>
+                        </div>
+                        <div class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6 fade-in">
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                                <h3 class="font-bold text-lg mb-3">📬 Últimas Notificaciones</h3>
+                                ${
+                                    mockDatabase.notificaciones.filter(
+                                        (n) =>
+                                            n.usuario ===
+                                            app.currentUser.nombre,
+                                    ).length === 0
+                                        ? '<p class="text-slate-500 text-sm">No hay notificaciones nuevas.</p>'
+                                        : mockDatabase.notificaciones
+                                              .filter(
+                                                  (n) =>
+                                                      n.usuario ===
+                                                      app.currentUser.nombre,
+                                              )
+                                              .slice(-3)
+                                              .reverse()
+                                              .map(
+                                                  (n) =>
+                                                      `<div class="border-b border-slate-100 py-2 text-sm flex justify-between items-start">
+                                            <span>${n.mensaje}</span>
+                                            <span class="text-slate-400 text-xs whitespace-nowrap ml-2">${n.fecha}</span>
+                                        </div>`,
+                                              )
+                                              .join('')
+                                }
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                                <h3 class="font-bold text-lg mb-3">📊 Resumen de Actividad</h3>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between"><span>Reservas confirmadas:</span> <span class="font-bold">${reservas.filter((r) => r.estado === 'confirmada').length}</span></div>
+                                    <div class="flex justify-between"><span>Incidencias reportadas:</span> <span class="font-bold">${incidencias.length}</span></div>
+                                    <div class="flex justify-between"><span>Pagos realizados:</span> <span class="font-bold">${pagos.filter((p) => p.estado === 'aprobado').length}</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    }
+
+                    // res_pagos (original)
+                    if (viewName === 'res_pagos') {
+                        const pagos = await apiService.getPagosUsuario(
+                            app.currentUser.id,
+                        );
+                        html = `
+                        <div class="flex justify-between items-center mb-6 fade-in">
+                            <h2 class="text-2xl font-bold text-dark">Mis Pagos (HU01, HU03)</h2>
+                            <span class="bg-green-500 text-white text-xs px-3 py-1 rounded-full">100%</span>
+                        </div>
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 fade-in">
+                            <div class="lg:col-span-1">
+                                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                                    <h3 class="font-bold text-lg mb-4 text-dark"><i class="fa-solid fa-upload text-primary mr-2"></i> Subir Comprobante (HU01)</h3>
+                                    <form onsubmit="app.handleSubirPago(event)" class="space-y-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-dark mb-1">Monto (S/)</label>
+                                            <input type="number" id="pago-monto" required min="1" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-dark mb-1">Archivo de Comprobante</label>
+                                            <input type="file" id="pago-archivo" required accept="image/*,.pdf" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-primary hover:file:bg-blue-100 cursor-pointer">
+                                            <p class="text-xs text-slate-400 mt-1">Formatos: PDF, JPG, PNG (máx 5MB)</p>
+                                        </div>
+                                        <button type="submit" class="w-full bg-primary hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">Registrar Pago</button>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="lg:col-span-2">
+                                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                                    <table class="min-w-full divide-y divide-slate-200">
+                                        <thead class="bg-slate-50">
+                                            <tr>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Fecha</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Monto</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-slate-200">
+                                            ${pagos.length === 0 ? '<tr><td colspan="3" class="px-6 py-4 text-center text-slate-500">No hay pagos registrados.</td></tr>' : ''}
+                                            ${pagos
+                                                .map(
+                                                    (p) => `
+                                                <tr>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">${p.fecha}</td>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-dark">S/ ${p.monto.toFixed(2)}</td>
+                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                                            ${p.estado === 'aprobado' ? 'bg-green-100 text-green-800' : p.estado === 'rechazado' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}">
+                                                            ${p.estado.toUpperCase()}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            `,
+                                                )
+                                                .join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    }
+
+                    // res_incidencias (original)
+                    if (viewName === 'res_incidencias') {
+                        const incidencias =
+                            await apiService.getIncidenciasUsuario(
+                                app.currentUser.id,
+                            );
+                        html = `
+                        <div class="flex justify-between items-center mb-6 fade-in">
+                            <h2 class="text-2xl font-bold text-dark">Mis Incidencias (HU06, HU07, HU09)</h2>
+                            <span class="bg-purple-500 text-white text-xs px-3 py-1 rounded-full">
+                                <i class="fa-solid fa-robot mr-1"></i> IA: Clasificación Automática
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 fade-in">
+                            <div class="lg:col-span-1">
+                                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                                    <h3 class="font-bold text-lg mb-4 text-dark"><i class="fa-solid fa-plus-circle text-primary mr-2"></i> Nuevo Reporte (HU06)</h3>
+                                    <form onsubmit="app.handleSubirIncidencia(event)" class="space-y-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-dark mb-1">Título</label>
+                                            <input type="text" id="inc-titulo" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-dark mb-1">Descripción detallada</label>
+                                            <textarea id="inc-desc" rows="3" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"></textarea>
+                                            <p class="text-xs text-slate-500 mt-1">🤖 La IA analizará este texto para categorizar automáticamente (HU07).</p>
+                                        </div>
+                                        <button type="submit" class="w-full bg-primary hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                                            <i class="fa-solid fa-robot mr-2"></i> Enviar con IA
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="lg:col-span-2 flex flex-col gap-4">
+                                ${incidencias.length === 0 ? '<div class="bg-white p-6 rounded-xl border text-center text-slate-500">No tienes incidencias reportadas.</div>' : ''}
+                                ${incidencias
+                                    .map(
+                                        (i) => `
+                                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <h4 class="font-bold text-lg text-dark">${i.titulo}</h4>
+                                            <span class="px-2 py-1 text-xs font-semibold rounded ${i.estado === 'cerrada' ? 'bg-green-100 text-green-700' : i.estado === 'asignada' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'} border border-slate-200 uppercase">${i.estado}</span>
+                                        </div>
+                                        <p class="text-slate-600 text-sm mb-3">${i.descripcion}</p>
+                                        <div class="flex flex-wrap gap-2 text-xs mb-3">
+                                            <span class="bg-purple-50 text-purple-700 px-2 py-1 rounded border border-purple-100">
+                                                <i class="fa-solid fa-robot mr-1"></i>IA: ${i.categoria_ia}
+                                            </span>
+                                            <span class="bg-orange-50 text-orange-700 px-2 py-1 rounded border border-orange-100">Prioridad: ${i.prioridad_ia}</span>
+                                            ${i.asignado_a ? `<span class="bg-green-50 text-green-700 px-2 py-1 rounded border border-green-100">👤 Asignado a: ${i.asignado_a}</span>` : ''}
+                                        </div>
+                                        ${
+                                            i.timeline
+                                                ? `
+                                            <div class="bg-slate-50 p-3 rounded border border-slate-100">
+                                                <p class="text-xs font-semibold text-slate-500 mb-2">📋 Timeline (HU09)</p>
+                                                ${i.timeline
+                                                    .map(
+                                                        (t) => `
+                                                    <div class="timeline-item text-xs text-slate-600">
+                                                        ${t.estado} - <span class="text-slate-400">${t.fecha}</span>
+                                                    </div>
+                                                `,
+                                                    )
+                                                    .join('')}
+                                            </div>
+                                        `
+                                                : ''
+                                        }
+                                    </div>
+                                `,
+                                    )
+                                    .join('')}
+                            </div>
+                        </div>
+                    `;
+                    }
+
+                    // res_reservas (original)
+                    if (viewName === 'res_reservas') {
+                        const reservas = await apiService.getReservasUsuario(
+                            app.currentUser.id,
+                        );
+                        const areas = await apiService.getAreas();
+                        const isMoroso =
+                            app.currentUser.estado_financiero === 'moroso';
+
+                        const today = new Date();
+                        const currentMonth = today.getMonth();
+                        const currentYear = today.getFullYear();
+                        const firstDay = new Date(
+                            currentYear,
+                            currentMonth,
+                            1,
+                        ).getDay();
+                        const daysInMonth = new Date(
+                            currentYear,
+                            currentMonth + 1,
+                            0,
+                        ).getDate();
+
+                        const weekDays = [
+                            'Dom',
+                            'Lun',
+                            'Mar',
+                            'Mié',
+                            'Jue',
+                            'Vie',
+                            'Sáb',
+                        ];
+                        let calendarHeader = weekDays
+                            .map(
+                                (d) =>
+                                    `<div class="text-center text-xs font-semibold text-slate-500 py-2">${d}</div>`,
+                            )
+                            .join('');
+
+                        let dayCells = '';
+                        for (let i = 0; i < firstDay; i++) {
+                            dayCells += `<div class="text-center py-2"></div>`;
+                        }
+                        for (let day = 1; day <= daysInMonth; day++) {
+                            const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                            const isReserved = reservas.some(
+                                (r) =>
+                                    r.fecha === dateStr &&
+                                    r.estado !== 'cancelada',
+                            );
+                            const isToday =
+                                day === today.getDate() &&
+                                currentMonth === today.getMonth();
+                            const dayClass = isReserved
+                                ? 'reserved'
+                                : 'available';
+                            const todayClass = isToday ? 'today' : '';
+                            dayCells += `
+                            <div class="calendar-day ${dayClass} ${todayClass} text-center py-2 rounded text-sm font-medium transition">
+                                ${day}
+                                ${isReserved ? '<span class="block text-[8px] text-red-500">🔴</span>' : ''}
+                            </div>
+                        `;
+                        }
+
+                        html = `
+                        <div class="flex justify-between items-center mb-6 fade-in">
+                            <h2 class="text-2xl font-bold text-dark">Reservas (HU11, HU12, HU13, HU14, HU15)</h2>
+                            <span class="bg-green-500 text-white text-xs px-3 py-1 rounded-full">95%</span>
+                        </div>
+
+                        ${
+                            isMoroso
+                                ? `
+                            <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r shadow-sm fade-in">
+                                <div class="flex">
+                                    <div class="flex-shrink-0"><i class="fa-solid fa-lock text-red-500 text-xl"></i></div>
+                                    <div class="ml-3">
+                                        <h3 class="text-sm font-medium text-red-800">🚫 Sistema de Reservas Bloqueado (HU13)</h3>
+                                        <p class="text-sm text-red-700 mt-1">Estimado residente, usted presenta una deuda activa de S/ ${app.currentUser.deuda}. Para utilizar las áreas comunes, por favor regularice sus pagos.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `
+                                : ''
+                        }
+
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 fade-in">
+                            <div class="lg:col-span-1">
+                                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                                    <h3 class="font-bold text-lg mb-4 text-dark"><i class="fa-solid fa-calendar-plus text-primary mr-2"></i> Solicitar Reserva (HU12)</h3>
+                                    <form onsubmit="app.handleSubirReserva(event)" class="space-y-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-dark mb-1">Área Común (HU11)</label>
+                                            <select id="res-area" ${isMoroso ? 'disabled' : ''} class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent disabled:bg-slate-100">
+                                                ${areas.map((a) => `<option value="${a.nombre}">${a.nombre} (Cap: ${a.capacity})</option>`).join('')}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-dark mb-1">Fecha</label>
+                                            <input type="date" id="res-fecha" required ${isMoroso ? 'disabled' : ''} min="${new Date().toISOString().split('T')[0]}" class="w-full border border-slate-300 rounded-lg px-3 py-2 disabled:bg-slate-100">
+                                        </div>
+                                        <button type="submit" ${isMoroso ? 'disabled' : ''} class="w-full ${isMoroso ? 'bg-slate-400 cursor-not-allowed' : 'bg-primary hover:bg-blue-700'} text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                                            Confirmar Reserva
+                                        </button>
+                                    </form>
+                                    <p class="text-xs text-slate-400 mt-3 text-center">📬 Recibirás notificaciones de confirmación (HU15)</p>
+                                </div>
+                            </div>
+                            <div class="lg:col-span-2">
+                                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                                    <h3 class="font-bold text-lg mb-4 text-dark">📅 Calendario de Disponibilidad (HU11)</h3>
+                                    <div class="grid grid-cols-7 gap-1 mb-2">
+                                        ${calendarHeader}
+                                    </div>
+                                    <div class="grid grid-cols-7 gap-1">
+                                        ${dayCells}
+                                    </div>
+                                    <div class="flex gap-4 mt-4 text-xs">
+                                        <span class="flex items-center"><span class="w-3 h-3 bg-green-100 border border-green-300 rounded mr-1"></span> Disponible</span>
+                                        <span class="flex items-center"><span class="w-3 h-3 bg-red-100 border border-red-300 rounded mr-1"></span> Reservado</span>
+                                        <span class="flex items-center"><span class="w-3 h-3 border-2 border-blue-500 rounded mr-1"></span> Hoy</span>
+                                    </div>
+                                </div>
+
+                                <h3 class="font-bold text-lg mt-6 mb-4 text-dark">Mis Reservas</h3>
+                                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                                    <table class="min-w-full divide-y divide-slate-200">
+                                        <thead class="bg-slate-50">
+                                            <tr>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Área</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Fecha / Hora</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-slate-200">
+                                            ${reservas.length === 0 ? '<tr><td colspan="4" class="px-6 py-4 text-center text-slate-500">No hay reservas vigentes.</td></tr>' : ''}
+                                            ${reservas
+                                                .map(
+                                                    (r) => `
+                                                <tr>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-dark">${r.area}</td>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">${r.fecha} - ${r.hora_inicio || '10:00'}</td>
+                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${r.estado === 'cancelada' ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'}">
+                                                            ${r.estado.toUpperCase()}
+                                                        </span>
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                                        ${r.estado !== 'cancelada' ? `<button onclick="app.cancelarReserva(${r.id})" class="text-red-600 hover:text-red-800 text-sm font-medium transition">Cancelar (HU14)</button>` : '-'}
+                                                    </td>
+                                                </tr>
+                                            `,
+                                                )
+                                                .join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    }
+
+                    // res_anuncios (original)
+                    if (viewName === 'res_anuncios') {
+                        const anuncios = await apiService.getAnuncios();
+                        html = `
+                        <div class="flex justify-between items-center mb-6 fade-in">
+                            <h2 class="text-2xl font-bold text-dark">📢 Anuncios del Condominio (HU16)</h2>
+                            <span class="bg-blue-500 text-white text-xs px-3 py-1 rounded-full">100%</span>
+                        </div>
+                        <div class="space-y-4 fade-in">
+                            ${anuncios.length === 0 ? '<div class="bg-white p-6 rounded-xl text-center text-slate-500">No hay anuncios disponibles.</div>' : ''}
+                            ${anuncios
+                                .map(
+                                    (a) => `
+                                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition">
+                                    <div class="flex justify-between items-start">
+                                        <h3 class="font-bold text-lg text-dark">${a.titulo}</h3>
+                                        <span class="text-xs text-slate-400">${a.fecha}</span>
+                                    </div>
+                                    <p class="text-slate-600 mt-2">${a.mensaje}</p>
+                                    <p class="text-xs text-slate-400 mt-2">Publicado por: ${a.autor}</p>
+                                </div>
+                            `,
+                                )
+                                .join('')}
+                        </div>
+                    `;
+                    }
+
+                    // res_chat_historial (original)
+                    if (viewName === 'res_chat_historial') {
+                        const historial = await apiService.getChatHistorial();
+                        html = `
+                        <div class="flex justify-between items-center mb-6 fade-in">
+                            <h2 class="text-2xl font-bold text-dark">📜 Historial del Asistente Virtual (HU18)</h2>
+                            <span class="bg-purple-500 text-white text-xs px-3 py-1 rounded-full">
+                                <i class="fa-solid fa-robot mr-1"></i> IA
+                            </span>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in">
+                            ${historial.length === 0 ? '<div class="p-6 text-center text-slate-500">No hay conversaciones guardadas.</div>' : ''}
+                            ${historial
+                                .map(
+                                    (h) => `
+                                <div class="p-4 border-b border-slate-100 hover:bg-slate-50 transition">
+                                    <div class="flex justify-between items-start">
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium text-dark">👤 ${h.usuario}</p>
+                                            <p class="text-sm text-slate-600 mt-1">💬 ${h.mensaje}</p>
+                                        </div>
+                                        <span class="text-xs text-slate-400 whitespace-nowrap ml-4">${h.fecha}</span>
+                                    </div>
+                                </div>
+                            `,
+                                )
+                                .join('')}
+                        </div>
+                    `;
+                    }
+
+                    // --- VISTAS ADMINISTRADOR (originales + nueva) ---
+                    if (viewName === 'adm_dashboard') {
+                        const pendientes = (
+                            await apiService.getAllPagosPendientes()
+                        ).length;
+                        const incidencias = (
+                            await apiService.getAllIncidencias()
+                        ).length;
+                        const reporte =
+                            await apiService.generarReporteFinanciero();
+                        const totalResidentes = mockDatabase.usuarios.filter(
+                            (u) => u.rol === 'residente',
+                        ).length;
+                        const reservasActivas = mockDatabase.reservas.filter(
+                            (r) => r.estado === 'confirmada',
+                        ).length;
+
+                        html = `
+                        <div class="flex justify-between items-center mb-6 fade-in">
+                            <h2 class="text-2xl font-bold text-dark">Dashboard Administrativo (HU05)</h2>
+                            <span class="bg-green-500 text-white text-xs px-3 py-1 rounded-full">100%</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 fade-in mb-8">
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-yellow-400 hover:shadow-md transition">
+                                <p class="text-sm text-slate-500 font-medium mb-1">Pagos por validar</p>
+                                <h3 class="text-3xl font-bold text-dark">${pendientes}</h3>
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-red-500 hover:shadow-md transition">
+                                <p class="text-sm text-slate-500 font-medium mb-1">Residentes Morosos</p>
+                                <h3 class="text-3xl font-bold text-dark">${reporte.morosos}</h3>
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-blue-500 hover:shadow-md transition">
+                                <p class="text-sm text-slate-500 font-medium mb-1">Incidencias Activas</p>
+                                <h3 class="text-3xl font-bold text-dark">${incidencias}</h3>
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-green-500 hover:shadow-md transition">
+                                <p class="text-sm text-slate-500 font-medium mb-1">Total Recaudado</p>
+                                <h3 class="text-3xl font-bold text-dark">S/ ${reporte.totalRecaudado.toFixed(2)}</h3>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 fade-in">
+                            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                                <h3 class="font-bold text-lg mb-3">📊 Estadísticas Generales</h3>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="bg-slate-50 p-4 rounded-lg">
+                                        <p class="text-xs text-slate-500">Total Residentes</p>
+                                        <p class="text-2xl font-bold text-dark">${totalResidentes}</p>
+                                    </div>
+                                    <div class="bg-slate-50 p-4 rounded-lg">
+                                        <p class="text-xs text-slate-500">Reservas Activas</p>
+                                        <p class="text-2xl font-bold text-dark">${reservasActivas}</p>
+                                    </div>
+                                    <div class="bg-slate-50 p-4 rounded-lg col-span-2">
+                                        <p class="text-xs text-slate-500">Tasa de Ocupación</p>
+                                        <div class="w-full bg-slate-200 rounded-full h-2.5 mt-2">
+                                            <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${Math.round((reservasActivas / 30) * 100)}%"></div>
+                                        </div>
+                                        <p class="text-sm font-bold mt-1">${Math.round((reservasActivas / 30) * 100)}%</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                                <h3 class="font-bold text-lg mb-3">🔔 Alertas de Morosidad (HU04)</h3>
+                                <button onclick="app.generarAlertasMorosidad()" class="w-full bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg text-sm transition-colors">
+                                    <i class="fa-solid fa-bell mr-2"></i> Generar Alertas
+                                </button>
+                                <p class="text-xs text-slate-500 mt-2 text-center">⏰ Alertas automáticas cada minuto</p>
+                                <hr class="my-3">
+                                <div class="flex justify-between text-sm">
+                                    <span>Última alerta:</span>
+                                    <span class="text-slate-500">${new Date().toLocaleTimeString()}</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span>Morosos registrados:</span>
+                                    <span class="font-bold text-red-600">${reporte.morosos}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    }
+
+                    if (viewName === 'adm_pagos') {
+                        const pendientes =
+                            await apiService.getAllPagosPendientes();
+                        html = `
+                        <div class="flex justify-between items-center mb-6 fade-in">
+                            <h2 class="text-2xl font-bold text-dark">Validación de Pagos (HU02)</h2>
+                            <span class="bg-yellow-500 text-white text-xs px-3 py-1 rounded-full">${pendientes.length} pendientes</span>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in">
+                            <table class="min-w-full divide-y divide-slate-200">
+                                <thead class="bg-slate-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Residente (ID)</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Fecha</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Monto</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Comprobante</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-slate-200">
+                                    ${pendientes.length === 0 ? '<tr><td colspan="5" class="px-6 py-8 text-center text-slate-500"><i class="fa-regular fa-face-smile text-2xl mb-2 block"></i> Todo al día. No hay pagos pendientes.</td></tr>' : ''}
+                                    ${pendientes
+                                        .map(
+                                            (p) => `
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-dark">Residente #${p.residente_id}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">${p.fecha}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-dark">S/ ${p.monto.toFixed(2)}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-primary">
+                                               ${
+                                                   p.recibo
+                                                       ? `<a href="${p.recibo}" target="_blank" class="flex items-center gap-1 hover:underline"><i class="fa-solid fa-file-pdf mr-1"></i> Ver comprobante</a>`
+                                                       : '<span class="text-slate-400">Sin archivo</span>'
+                                               }
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                                <button onclick="app.validarPago(${p.id}, true)" class="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-3 py-1 rounded font-medium mr-2 transition">✅ Aprobar</button>
+                                                <button onclick="app.validarPago(${p.id}, false)" class="bg-red-100 text-red-700 hover:bg-red-200 px-3 py-1 rounded font-medium transition">❌ Rechazar</button>
+                                            </td>
+                                        </tr>
+                                    `,
+                                        )
+                                        .join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    }
+
+                    if (viewName === 'adm_incidencias') {
+                        const incidencias =
+                            await apiService.getAllIncidencias();
+                        html = `
+                        <div class="flex justify-between items-center mb-6 fade-in">
+                            <h2 class="text-2xl font-bold text-dark">Panel de Incidencias (HU07, HU08, HU09, HU10)</h2>
+                            <span class="bg-purple-500 text-white text-xs px-3 py-1 rounded-full">
+                                <i class="fa-solid fa-robot mr-1"></i> IA Activa
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 fade-in">
+                            ${incidencias
+                                .map(
+                                    (i) => `
+                                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col hover:shadow-md transition">
+                                    <div class="p-1 ${i.prioridad_ia === 'alta' ? 'bg-red-500' : i.prioridad_ia === 'media' ? 'bg-yellow-500' : 'bg-slate-800'} flex justify-center text-xs text-white uppercase tracking-wider font-semibold">
+                                        🤖 IA: ${i.categoria_ia} | Prioridad: ${i.prioridad_ia}
+                                    </div>
+                                    <div class="p-5 flex-1">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <h4 class="font-bold text-lg text-dark leading-tight">${i.titulo}</h4>
+                                            ${i.prioridad_ia === 'alta' ? '<i class="fa-solid fa-fire text-red-500" title="Prioridad Alta"></i>' : ''}
+                                        </div>
+                                        <p class="text-xs text-slate-400 mb-3">Reportado por Residente #${i.residente_id}</p>
+                                        <p class="text-slate-600 text-sm bg-slate-50 p-3 rounded border border-slate-100 italic">"${i.descripcion}"</p>
+                                        ${
+                                            i.timeline
+                                                ? `
+                                            <div class="mt-3 bg-slate-50 p-2 rounded border border-slate-100 text-xs max-h-24 overflow-y-auto">
+                                                ${i.timeline.map((t) => `<div class="flex justify-between"><span>${t.estado}</span><span class="text-slate-400">${t.fecha}</span></div>`).join('')}
+                                            </div>
+                                        `
+                                                : ''
+                                        }
+                                    </div>
+                                    <div class="p-4 border-t border-slate-100 bg-slate-50 flex flex-wrap gap-2 items-center justify-between">
+                                        <span class="text-xs font-semibold px-2 py-1 rounded ${i.estado === 'cerrada' ? 'bg-green-100 text-green-700' : i.estado === 'asignada' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'} uppercase">${i.estado}</span>
+                                        ${
+                                            i.estado !== 'cerrada'
+                                                ? `
+                                            <button onclick="app.asignarIncidencia(${i.id})" class="text-primary text-xs font-medium hover:underline">👤 Asignar (HU08)</button>
+                                            <button onclick="app.cerrarIncidencia(${i.id})" class="text-green-600 text-xs font-medium hover:underline">✅ Cerrar (HU10)</button>
+                                        `
+                                                : ''
+                                        }
+                                    </div>
+                                </div>
+                            `,
+                                )
+                                .join('')}
+                        </div>
+                    `;
+                    }
+
+                    if (viewName === 'adm_anuncios') {
+                        const anuncios = await apiService.getAnuncios();
+                        html = `
+                        <div class="flex justify-between items-center mb-6 fade-in">
+                            <h2 class="text-2xl font-bold text-dark">📢 Publicar Anuncios (HU16)</h2>
+                            <span class="bg-blue-500 text-white text-xs px-3 py-1 rounded-full">100%</span>
+                        </div>
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 fade-in">
+                            <div class="lg:col-span-1">
+                                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                                    <h3 class="font-bold text-lg mb-4"><i class="fa-solid fa-pen-to-square text-primary mr-2"></i> Nuevo Anuncio</h3>
+                                    <form onsubmit="app.handleCrearAnuncio(event)" class="space-y-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-dark mb-1">Título</label>
+                                            <input type="text" id="anuncio-titulo" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-dark mb-1">Mensaje</label>
+                                            <textarea id="anuncio-mensaje" rows="3" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"></textarea>
+                                        </div>
+                                        <button type="submit" class="w-full bg-primary hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                                            <i class="fa-solid fa-bullhorn mr-2"></i> Publicar Anuncio
+                                        </button>
+                                    </form>
+                                    <p class="text-xs text-slate-400 mt-3 text-center">📨 Los residentes recibirán notificación</p>
+                                </div>
+                            </div>
+                            <div class="lg:col-span-2">
+                                <h3 class="font-bold text-lg mb-4 text-dark">Anuncios Publicados</h3>
+                                <div class="space-y-3">
+                                    ${anuncios
+                                        .map(
+                                            (a) => `
+                                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition">
+                                            <div class="flex justify-between items-start">
+                                                <h4 class="font-bold text-dark">${a.titulo}</h4>
+                                                <span class="text-xs text-slate-400">${a.fecha}</span>
+                                            </div>
+                                            <p class="text-slate-600 text-sm mt-1">${a.mensaje}</p>
+                                            <p class="text-xs text-slate-400 mt-1">Por: ${a.autor}</p>
+                                        </div>
+                                    `,
+                                        )
+                                        .join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    }
+
+                    if (viewName === 'adm_reportes') {
+                        const reporte =
+                            await apiService.generarReporteFinanciero();
+                        const morosos = mockDatabase.usuarios.filter(
+                            (u) => u.estado_financiero === 'moroso',
+                        );
+                        const pagosAprobados = mockDatabase.pagos.filter(
+                            (p) => p.estado === 'aprobado',
+                        );
+                        const pagosPorMes = {};
+                        pagosAprobados.forEach((p) => {
+                            const mes = p.fecha.substring(0, 7);
+                            pagosPorMes[mes] =
+                                (pagosPorMes[mes] || 0) + p.monto;
+                        });
+
+                        html = `
+                        <div class="flex justify-between items-center mb-6 fade-in">
+                            <h2 class="text-2xl font-bold text-dark">📊 Reportes Financieros (HU05)</h2>
+                            <span class="bg-green-500 text-white text-xs px-3 py-1 rounded-full">100%</span>
+                        </div>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 fade-in">
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                                <h3 class="font-bold text-lg mb-4">Resumen General</h3>
+                                <div class="space-y-3">
+                                    <div class="flex justify-between border-b border-slate-100 pb-2">
+                                        <span class="text-slate-600">Total recaudado</span>
+                                        <span class="font-bold text-2xl text-green-600">S/ ${reporte.totalRecaudado.toFixed(2)}</span>
+                                    </div>
+                                    <div class="flex justify-between border-b border-slate-100 pb-2">
+                                        <span class="text-slate-600">Pagos aprobados</span>
+                                        <span class="font-bold">${reporte.cantidadPagos}</span>
+                                    </div>
+                                    <div class="flex justify-between border-b border-slate-100 pb-2">
+                                        <span class="text-slate-600">Residentes morosos</span>
+                                        <span class="font-bold text-red-600">${reporte.morosos}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-600">Fecha de generación</span>
+                                        <span class="text-slate-500 text-sm">${reporte.fechaGeneracion}</span>
+                                    </div>
+                                </div>
+                                <button onclick="app.exportarReporte()" class="mt-6 bg-primary hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm transition-colors w-full">
+                                    <i class="fa-solid fa-file-pdf mr-2"></i> Exportar a PDF
+                                </button>
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                                <h3 class="font-bold text-lg mb-4">📈 Recaudación por Mes</h3>
+                                ${
+                                    Object.keys(pagosPorMes).length === 0
+                                        ? '<p class="text-slate-500 text-center py-8">No hay datos disponibles</p>'
+                                        : `<div class="space-y-3">
+                                        ${Object.entries(pagosPorMes)
+                                            .map(
+                                                ([mes, total]) => `
+                                            <div>
+                                                <div class="flex justify-between text-sm mb-1">
+                                                    <span>${mes}</span>
+                                                    <span class="font-bold">S/ ${total.toFixed(2)}</span>
+                                                </div>
+                                                <div class="w-full bg-slate-200 rounded-full h-2">
+                                                    <div class="bg-blue-600 h-2 rounded-full" style="width: ${Math.min((total / Math.max(...Object.values(pagosPorMes))) * 100, 100)}%"></div>
+                                                </div>
+                                            </div>
+                                        `,
+                                            )
+                                            .join('')}
+                                    </div>`
+                                }
+                                <div class="mt-6 p-4 bg-slate-50 rounded-lg">
+                                    <p class="text-sm text-slate-600">👤 Residentes morosos:</p>
+                                    ${
+                                        morosos.length === 0
+                                            ? '<p class="text-sm text-green-600">✅ No hay morosos</p>'
+                                            : morosos
+                                                  .map(
+                                                      (u) =>
+                                                          `<p class="text-sm text-red-600">• ${u.nombre} - Dpto ${u.dpto} - Deuda: S/ ${u.deuda}</p>`,
+                                                  )
+                                                  .join('')
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    }
+
+                    // --- NUEVA VISTA: SOLICITUDES DE REGISTRO ---
+                    if (viewName === 'adm_solicitudes') {
+                        const solicitudes =
+                            await apiService.getSolicitudesRegistro();
+                        const invitaciones = mockDatabase.invitaciones;
+
+                        html = `
+                        <div class="flex justify-between items-center mb-6 fade-in">
+                            <h2 class="text-2xl font-bold text-dark">📋 Solicitudes de Registro (HU19)</h2>
+                            <span class="bg-yellow-500 text-white text-xs px-3 py-1 rounded-full">${solicitudes.length} pendientes</span>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6 fade-in">
+                            <h3 class="font-bold text-lg mb-3"><i class="fa-solid fa-envelope text-primary mr-2"></i> Generar Enlace de Invitación</h3>
+                            <div class="flex gap-4 items-end flex-wrap">
+                                <div class="flex-1 min-w-[150px]">
+                                    <label class="block text-sm font-medium text-dark mb-1">Departamento</label>
+                                    <input type="text" id="inv-dpto" placeholder="Ej: 301" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary outline-none">
+                                </div>
+                                <button onclick="app.generarInvitacion()" class="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+                                    <i class="fa-solid fa-plus mr-2"></i> Generar Enlace
+                                </button>
+                            </div>
+                            <div class="mt-3">
+                                <p class="text-xs text-slate-500">Códigos activos:</p>
+                                <div class="flex flex-wrap gap-2 mt-1">
+                                    ${
+                                        invitaciones.filter((inv) => !inv.usado)
+                                            .length === 0
+                                            ? '<span class="text-xs text-slate-400">No hay códigos activos</span>'
+                                            : invitaciones
+                                                  .filter((inv) => !inv.usado)
+                                                  .map(
+                                                      (inv) =>
+                                                          `<span class="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded border border-blue-200">${inv.codigo} → Dpto ${inv.dpto}</span>`,
+                                                  )
+                                                  .join('')
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in">
+                            <table class="min-w-full divide-y divide-slate-200">
+                                <thead class="bg-slate-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Solicitante</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Correo</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Dpto</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Fecha</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-slate-200">
+                                    ${
+                                        solicitudes.length === 0
+                                            ? '<tr><td colspan="5" class="px-6 py-8 text-center text-slate-500"><i class="fa-regular fa-face-smile text-2xl mb-2 block"></i> No hay solicitudes pendientes.</td></tr>'
+                                            : solicitudes
+                                                  .map(
+                                                      (s) => `
+                                            <tr>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-dark">${s.nombre}</td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">${s.email}</td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">${s.dpto || '—'}</td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${s.fecha}</td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                                                    <button onclick="app.aprobarSolicitud(${s.id})" class="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-3 py-1 rounded font-medium transition">✅ Aprobar</button>
+                                                    <button onclick="app.rechazarSolicitud(${s.id})" class="bg-red-100 text-red-700 hover:bg-red-200 px-3 py-1 rounded font-medium transition">❌ Rechazar</button>
+                                                </td>
+                                            </tr>
+                                        `,
+                                                  )
+                                                  .join('')
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    }
+
+                    container.innerHTML = html;
+                    container.scrollTop = 0;
+                },
+
+                // ==========================================
+                // 5. MANEJADORES DE EVENTOS (originales)
+                // ==========================================
+                handleSubirPago: async (e) => {
+                    e.preventDefault();
+                    const monto = parseFloat(
+                        document.getElementById('pago-monto').value,
+                    );
+                    const archivo = document.getElementById('pago-archivo');
+                    const btn = e.target.querySelector('button');
+                    const originalText = btn.innerHTML;
+
+                    if (archivo.files.length > 0) {
+                        const file = archivo.files[0];
+                        const validTypes = [
+                            'image/jpeg',
+                            'image/png',
+                            'application/pdf',
+                        ];
+                        if (!validTypes.includes(file.type)) {
+                            app.showToast(
+                                '❌ Formato no válido. Use PDF, JPG o PNG.',
+                                'error',
+                            );
+                            return;
+                        }
+                        if (file.size > 5 * 1024 * 1024) {
+                            app.showToast('❌ El archivo excede 5MB.', 'error');
+                            return;
+                        }
+                    }
+
+                    btn.innerHTML =
+                        '<i class="fa-solid fa-circle-notch fa-spin"></i> Procesando...';
+
+                    try {
+                        const comprobante =
+                            archivo.files.length > 0 ? archivo.files[0] : null;
+                        await apiService.registrarPago({
+                            residente_id: app.currentUser.id,
+                            monto: monto,
+                            comprobante,
+                        });
+                        app.showToast(
+                            '✅ Comprobante enviado para validación.',
+                        );
+                        app.renderView('res_pagos');
+                    } catch (err) {
+                        app.showToast('Error al procesar pago', 'error');
+                    } finally {
+                        btn.innerHTML = originalText;
+                    }
+                },
+
+                handleSubirIncidencia: async (e) => {
+                    e.preventDefault();
+                    const titulo = document.getElementById('inc-titulo').value;
+                    const desc = document.getElementById('inc-desc').value;
+                    const btn = e.target.querySelector('button');
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML =
+                        '<i class="fa-solid fa-circle-notch fa-spin"></i> 🤖 IA analizando...';
+
+                    try {
+                        await apiService.registrarIncidencia({
+                            residente_id: app.currentUser.id,
+                            titulo,
+                            descripcion: desc,
+                        });
+                        app.showToast(
+                            '✅ Incidencia reportada y clasificada con éxito.',
+                        );
+                        app.renderView('res_incidencias');
+                    } catch (err) {
+                        app.showToast('Error de red', 'error');
+                    } finally {
+                        btn.innerHTML = originalText;
+                    }
+                },
+
+                handleSubirReserva: async (e) => {
+                    e.preventDefault();
+                    const area = document.getElementById('res-area').value;
+                    const fecha = document.getElementById('res-fecha').value;
+                    const btn = e.target.querySelector('button');
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML =
+                        '<i class="fa-solid fa-circle-notch fa-spin"></i> Validando...';
+
+                    try {
+                        await apiService.registrarReserva({
+                            residente_id: app.currentUser.id,
+                            area,
+                            fecha,
+                        });
+                        app.showToast('✅ Reserva confirmada con éxito.');
+                        app.renderView('res_reservas');
+                    } catch (err) {
+                        app.showToast(err, 'error');
+                        btn.innerHTML = originalText;
+                    }
+                },
+
+                handleCrearAnuncio: async (e) => {
+                    e.preventDefault();
+                    const titulo =
+                        document.getElementById('anuncio-titulo').value;
+                    const mensaje =
+                        document.getElementById('anuncio-mensaje').value;
+                    const btn = e.target.querySelector('button');
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML =
+                        '<i class="fa-solid fa-circle-notch fa-spin"></i> Publicando...';
+
+                    try {
+                        await apiService.crearAnuncio(titulo, mensaje);
+                        app.showToast('✅ Anuncio publicado correctamente.');
+                        app.renderView('adm_anuncios');
+                    } catch (err) {
+                        app.showToast('Error al publicar', 'error');
+                    } finally {
+                        btn.innerHTML = originalText;
+                    }
+                },
+
+                // ==========================================
+                // 6. ACCIONES ADMINISTRATIVAS (originales)
+                // ==========================================
+                validarPago: async (id, aprobar) => {
+                    try {
+                        await apiService.validarPago(id, aprobar);
+                        app.showToast(
+                            aprobar
+                                ? '✅ Pago Aprobado y saldo actualizado.'
+                                : '❌ Pago Rechazado.',
+                        );
+                        app.renderView('adm_pagos');
+                    } catch (err) {
+                        app.showToast('Error del servidor', 'error');
+                    }
+                },
+
+                asignarIncidencia: async (id) => {
+                    const trabajador = prompt(
+                        '👤 Ingrese el nombre del trabajador a asignar:',
+                    );
+                    if (!trabajador) return;
+                    try {
+                        await apiService.asignarIncidencia(id, trabajador);
+                        app.showToast(`✅ Incidencia asignada a ${trabajador}`);
+                        app.renderView('adm_incidencias');
+                    } catch (err) {
+                        app.showToast('Error al asignar', 'error');
+                    }
+                },
+
+                cerrarIncidencia: async (id) => {
+                    if (!confirm('¿Confirmar cierre de esta incidencia?'))
+                        return;
+                    try {
+                        await apiService.cerrarIncidencia(id);
+                        app.showToast('✅ Incidencia cerrada exitosamente.');
+                        app.renderView('adm_incidencias');
+                    } catch (err) {
+                        app.showToast('Error al cerrar', 'error');
+                    }
+                },
+
+                cancelarReserva: async (id) => {
+                    if (!confirm('¿Confirmar cancelación de esta reserva?'))
+                        return;
+                    try {
+                        await apiService.cancelarReserva(id);
+                        app.showToast('✅ Reserva cancelada.');
+                        app.renderView('res_reservas');
+                    } catch (err) {
+                        app.showToast('Error al cancelar', 'error');
+                    }
+                },
+
+                exportarReporte: () => {
+                    const reporte = mockDatabase.reportes[
+                        mockDatabase.reportes.length - 1
+                    ] || { totalRecaudado: 0, cantidadPagos: 0, morosos: 0 };
+                    const contenido = `
+========================================
+  REPORTE FINANCIERO - CONDOMINIO IA
+========================================
+Fecha: ${new Date().toLocaleString()}
+----------------------------------------
+Total Recaudado: S/ ${reporte.totalRecaudado.toFixed(2)}
+Pagos Aprobados: ${reporte.cantidadPagos}
+Residentes Morosos: ${reporte.morosos}
+----------------------------------------
+Generado por: ${app.currentUser?.nombre || 'Administrador'}
+========================================
+                `;
+                    console.log('📄 REPORTE EXPORTADO:\n', contenido);
+                    app.showToast(
+                        '📄 Reporte generado en consola (simulación PDF)',
+                        'success',
+                    );
+
+                    const blob = new Blob([contenido], { type: 'text/plain' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `reporte_financiero_${new Date().toISOString().split('T')[0]}.txt`;
+                    a.click();
+                },
+
+                // --- NUEVAS ACCIONES: GENERAR INVITACIÓN Y APROBAR/RECHAZAR ---
+                generarInvitacion: async () => {
+                    const dpto = document
+                        .getElementById('inv-dpto')
+                        .value.trim();
+                    if (!dpto) {
+                        app.showToast('❌ Ingresa un departamento', 'error');
+                        return;
+                    }
+                    await apiService.generarInvitacion(dpto);
+                    document.getElementById('inv-dpto').value = '';
+                    app.renderView('adm_solicitudes');
+                },
+
+                aprobarSolicitud: async (id) => {
+                    if (!confirm('¿Aprobar esta solicitud de registro?'))
+                        return;
+                    try {
+                        await apiService.aprobarSolicitud(id);
+                        app.showToast(
+                            '✅ Solicitud aprobada. El residente ya puede iniciar sesión.',
+                            'success',
+                        );
+                        app.renderView('adm_solicitudes');
+                    } catch (err) {
+                        app.showToast('❌ Error al aprobar', 'error');
+                    }
+                },
+
+                rechazarSolicitud: async (id) => {
+                    const motivo = prompt('Ingresa el motivo del rechazo:');
+                    if (motivo === null) return;
+                    try {
+                        await apiService.rechazarSolicitud(
+                            id,
+                            motivo || 'Sin motivo',
+                        );
+                        app.showToast('✅ Solicitud rechazada.', 'info');
+                        app.renderView('adm_solicitudes');
+                    } catch (err) {
+                        app.showToast('❌ Error al rechazar', 'error');
+                    }
+                },
+
+                // ==========================================
+                // 7. CHATBOT (original)
+                // ==========================================
+                toggleChatbot: () => {
+                    const window = document.getElementById('chatbot-window');
+                    window.classList.toggle('hidden');
+                },
+
+                sendChatMessage: () => {
+                    const input = document.getElementById('chatbot-input');
+                    const message = input.value.trim();
+                    if (!message) return;
+
+                    const chatContainer =
+                        document.getElementById('chatbot-messages');
+
+                    apiService.guardarChatHistorial(message);
+
+                    chatContainer.innerHTML += `
+                    <div class="flex gap-2 w-5/6 self-end justify-end fade-in">
+                        <div class="bg-primary text-white p-2 rounded-lg shadow-sm text-sm rounded-tr-none">
+                            ${message}
+                        </div>
+                    </div>
+                `;
+                    input.value = '';
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+                    const idPensando = 'typing-' + Date.now();
+                    chatContainer.innerHTML += `
+                    <div id="${idPensando}" class="flex gap-2 w-5/6 fade-in mt-2">
+                        <div class="w-6 h-6 rounded-full bg-dark text-white flex flex-shrink-0 items-center justify-center text-xs"><i class="fa-solid fa-robot"></i></div>
+                        <div class="bg-white p-2 rounded-lg border border-slate-200 shadow-sm text-slate-400 text-xs flex items-center gap-1 rounded-tl-none">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i> Consultando reglamento...
+                        </div>
+                    </div>
+                `;
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+                    setTimeout(() => {
+                        const elPensando = document.getElementById(idPensando);
+                        if (elPensando) elPensando.remove();
+
+                        let respuestaIA =
+                            '📖 Según el Art. 14 del Reglamento Interno, las áreas comunes deben solicitarse con 24 hrs de anticipación y no presentar deudas pendientes.';
+
+                        const msgLower = message.toLowerCase();
+                        if (
+                            msgLower.includes('ruido') ||
+                            msgLower.includes('fiesta') ||
+                            msgLower.includes('música')
+                        ) {
+                            respuestaIA =
+                                '🔊 Según la normativa de convivencia (Art. 7), los ruidos molestos o fiestas están permitidos solo hasta las 23:00 hrs los fines de semana y 22:00 hrs entre semana.';
+                        } else if (
+                            msgLower.includes('mascota') ||
+                            msgLower.includes('perro') ||
+                            msgLower.includes('gato')
+                        ) {
+                            respuestaIA =
+                                '🐕 Las mascotas están permitidas según el Art. 5, pero deben transitar siempre con correa por las áreas comunes y recoger sus desechos.';
+                        } else if (
+                            msgLower.includes('hola') ||
+                            msgLower.includes('buen')
+                        ) {
+                            respuestaIA =
+                                '👋 ¡Hola! Soy el asistente virtual del condominio. ¿En qué te puedo asesorar hoy? Puedo ayudarte con: pagos, reservas, reglamento o incidencias.';
+                        } else if (
+                            msgLower.includes('pago') ||
+                            msgLower.includes('cuota') ||
+                            msgLower.includes('deuda')
+                        ) {
+                            respuestaIA =
+                                "💰 Los pagos deben realizarse hasta el día 5 de cada mes según el Art. 10. Puedes subir tu comprobante desde la sección 'Mis Pagos'. Si tienes deuda, el sistema te lo notificará.";
+                        } else if (
+                            msgLower.includes('reserva') ||
+                            msgLower.includes('área') ||
+                            msgLower.includes('parrilla') ||
+                            msgLower.includes('piscina')
+                        ) {
+                            respuestaIA =
+                                "📅 Las reservas se gestionan desde la sección 'Reservas'. Recuerda que las áreas tienen capacidad limitada y se requiere 24 hrs de anticipación (Art. 12).";
+                        } else if (
+                            msgLower.includes('incidencia') ||
+                            msgLower.includes('problema') ||
+                            msgLower.includes('reporte')
+                        ) {
+                            respuestaIA =
+                                "🔧 Puedes reportar incidencias desde la sección 'Incidencias'. El sistema las clasifica automáticamente con IA y las asigna al personal correspondiente.";
+                        } else if (
+                            msgLower.includes('administrador') ||
+                            msgLower.includes('contactar')
+                        ) {
+                            respuestaIA =
+                                '📞 Puedes contactar al administrador a través del sistema. Si tu consulta es urgente, llama al 01-555-1234 en horario de oficina.';
+                        }
+
+                        chatContainer.innerHTML += `
+                        <div class="flex gap-2 w-5/6 fade-in mt-2">
+                            <div class="w-6 h-6 rounded-full bg-dark text-white flex flex-shrink-0 items-center justify-center text-xs"><i class="fa-solid fa-robot"></i></div>
+                            <div class="bg-white p-2 rounded-lg border border-slate-200 shadow-sm text-slate-700 text-sm rounded-tl-none">
+                                ${respuestaIA}
+                            </div>
+                        </div>
+                    `;
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                    }, 1500);
+                },
+
+                // ==========================================
+                // 8. DEMO AUTOMÁTICA (original + paso extra)
+                // ==========================================
+                iniciarDemo: async function () {
+                    if (app.isDemoMode) {
+                        app.showToast('⏳ La demo ya está en curso', 'info');
+                        return;
+                    }
+
+                    app.isDemoMode = true;
+                    document
+                        .getElementById('demo-badge')
+                        .classList.remove('hidden');
+
+                    const demoSteps = [
+                        {
+                            msg: '🔐 Sistema de Autenticación - 3 roles disponibles',
+                            fn: () =>
+                                document
+                                    .getElementById('login-view')
+                                    .scrollIntoView({ behavior: 'smooth' }),
+                        },
+                        { delay: 1500 },
+                        {
+                            msg: '👤 Iniciando como Residente Al día...',
+                            fn: () => app.fillLogin('bhuaman@condo.pe', '123'),
+                        },
+                        { delay: 1000 },
+                        {
+                            msg: '📊 Dashboard del Residente - Estado financiero y notificaciones',
+                            fn: () => {
+                                app.handleLogin(new Event('submit'));
+                            },
+                        },
+                        { delay: 2000 },
+                        {
+                            msg: '💰 Gestión de Pagos - Sube tus comprobantes',
+                            fn: () => app.renderView('res_pagos'),
+                        },
+                        { delay: 2000 },
+                        {
+                            msg: '🔧 Reporte de Incidencias con IA - Clasificación automática',
+                            fn: () => app.renderView('res_incidencias'),
+                        },
+                        { delay: 2500 },
+                        {
+                            msg: '📅 Sistema de Reservas - Con bloqueo por morosidad',
+                            fn: () => app.renderView('res_reservas'),
+                        },
+                        { delay: 2500 },
+                        {
+                            msg: '📢 Anuncios del Condominio',
+                            fn: () => app.renderView('res_anuncios'),
+                        },
+                        { delay: 2000 },
+                        {
+                            msg: '🔄 Cambiando a Administrador...',
+                            fn: () => {
+                                app.logout();
+                                setTimeout(
+                                    () =>
+                                        app.fillLogin(
+                                            'admin@condo.pe',
+                                            'admin',
+                                        ),
+                                    500,
+                                );
+                            },
+                        },
+                        { delay: 2500 },
+                        {
+                            msg: '📈 Dashboard Administrativo - Métricas en tiempo real',
+                            fn: () => {
+                                app.handleLogin(new Event('submit'));
+                            },
+                        },
+                        { delay: 2500 },
+                        {
+                            msg: '✅ Validación de Pagos - Aprobar o rechazar',
+                            fn: () => app.renderView('adm_pagos'),
+                        },
+                        { delay: 2500 },
+                        {
+                            msg: '🛠️ Panel de Incidencias - Asignar y cerrar',
+                            fn: () => app.renderView('adm_incidencias'),
+                        },
+                        { delay: 2500 },
+                        {
+                            msg: '📊 Reportes Financieros - Exportación a PDF',
+                            fn: () => app.renderView('adm_reportes'),
+                        },
+                        { delay: 2500 },
+                        {
+                            msg: '📋 Gestión de Solicitudes de Registro',
+                            fn: () => app.renderView('adm_solicitudes'),
+                        },
+                        { delay: 2500 },
+                        {
+                            msg: '🎉 Demostración completada al 100%. Explora todas las funcionalidades.',
+                            fn: () =>
+                                app.showToast(
+                                    '🎉 Demo Finalizada - 19 HUs completadas',
+                                    'success',
+                                ),
+                        },
+                    ];
+
+                    for (const step of demoSteps) {
+                        if (step.msg) {
+                            app.showToast(step.msg, 'info');
+                            const highlightEl =
+                                document.querySelector('.demo-highlight');
+                            if (highlightEl)
+                                highlightEl.classList.remove('demo-highlight');
+                        }
+                        if (step.fn) step.fn();
+                        if (step.delay)
+                            await new Promise((r) => setTimeout(r, step.delay));
+                    }
+
+                    app.isDemoMode = false;
+                    setTimeout(() => {
+                        document
+                            .getElementById('demo-badge')
+                            .classList.add('hidden');
+                    }, 3000);
+                },
+            };
+
+            // ==========================================
+            // 9. INICIALIZACIÓN CON DETECCIÓN DE ENLACE
+            // ==========================================
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log(
+                    '🚀 Sistema Iniciado - 100% de Historias de Usuario',
+                );
+                console.log('📋 Credenciales:');
+                console.log('  ✅ bhuaman@condo.pe / 123 (Residente Al día)');
+                console.log('  ⚠️ imacuri@condo.pe / 123 (Residente Moroso)');
+                console.log('  👤 admin@condo.pe / admin (Administrador)');
+                console.log('📊 Total HUs: 19/19 (100%)');
+                console.log(
+                    '🎯 Presiona "Ver Demo Automática" para un recorrido completo',
+                );
+
+                // Detectar parámetro de invitación en la URL
+                const params = new URLSearchParams(window.location.search);
+                const codigoInvitacion = params.get('invitacion');
+                if (codigoInvitacion) {
+                    console.log(
+                        `🔑 Código de invitación detectado: ${codigoInvitacion}`,
+                    );
+                    app.mostrarRegistro();
+                    document.getElementById('reg-codigo').value =
+                        codigoInvitacion;
+                    app.showToast(
+                        `🔑 Código de invitación cargado automáticamente. Completa el registro.`,
+                        'info',
+                    );
+                    window.history.replaceState(
+                        {},
+                        document.title,
+                        window.location.pathname,
+                    );
+                }
+
+                // Lógica para cambiar el tipo de documento según nacionalidad
+                const nacionalidadSelect =
+                    document.getElementById('reg-nacionalidad');
+                const tipoDocLabel = document.getElementById('tipo-doc-label');
+                const documentoInput = document.getElementById('reg-documento');
+
+                nacionalidadSelect.addEventListener('change', function () {
+                    if (this.value === 'peruana') {
+                        tipoDocLabel.textContent = 'DNI';
+                        documentoInput.placeholder = 'Ej: 12345678';
+                        documentoInput.maxLength = 8;
+                    } else {
+                        tipoDocLabel.textContent = 'Carnet de Extranjería';
+                        documentoInput.placeholder = 'Ej: CE-12345678';
+                        documentoInput.maxLength = 12;
+                    }
+                });
+            });
+
+            // Alertas automáticas cada 30 segundos
+            setInterval(() => {
+                if (app.currentUser?.rol === 'administrador') {
+                    app.generarAlertasMorosidad();
+                }
+            }, 30000);
+
+            // Simular notificaciones entrantes
+            setInterval(() => {
+                if (app.currentUser) {
+                    const mensajes = [
+                        '📩 Nuevo pago registrado por Dpto. 202',
+                        '🔔 Incidencia de alta prioridad en Seguridad',
+                        '📅 Reserva confirmada para Zona de Parrillas',
+                        '💬 El asistente virtual tiene 3 conversaciones pendientes',
+                        '📢 Nuevo anuncio publicado por Administración',
+                    ];
+                    const msg =
+                        mensajes[Math.floor(Math.random() * mensajes.length)];
+                    if (app.currentUser.rol === 'administrador') {
+                        app.showToast(msg, 'info');
+                    }
+                }
+            }, 45000);
+        </script>
+    </body>
+</html>

@@ -25,7 +25,7 @@ SECRET_KEY = "django-insecure-o#7*9^z@yl&_sf$498kzpws5=-816ur4(93-g2s14ba*k9utp=
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['chris3d2.pythonanywhere.com']
+ALLOWED_HOSTS = ['chris3d2.pythonanywhere.com', '127.0.0.1', 'localhost']
 
 
 # Application definition
@@ -38,7 +38,14 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "rest_framework_simplejwt",
     "api",
+    "usuarios",
+    "pagos",
+    "incidencias",
+    "reservas",
+    "comunicaciones",
+    "auditoria",
 ]
 
 MIDDLEWARE = [
@@ -122,5 +129,20 @@ STATIC_URL = "static/"
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
-    ]
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+
+AUTH_USER_MODEL = 'usuarios.Usuario'
+
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=8),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
 }
