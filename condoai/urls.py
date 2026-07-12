@@ -16,4 +16,5 @@ urlpatterns = [
     path('api/', include('incidencias.urls')),
     path('api/', include('reservas.urls')),
     path('api/', include('comunicaciones.urls')),
+    path('explorer/', include('explorer.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

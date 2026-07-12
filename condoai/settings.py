@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "reservas",
     "comunicaciones",
     "auditoria",
+    "explorer",
 ]
 
 MIDDLEWARE = [
@@ -133,3 +134,10 @@ CORS_ALLOW_CREDENTIALS = True
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# django-sql-explorer
+EXPLORER_CONNECTIONS = {"default": "default"}
+EXPLORER_DEFAULT_CONNECTION = "default"
+EXPLORER_PERMISSION_VIEW = lambda r: r.user.is_staff
+EXPLORER_PERMISSION_CHANGE = lambda r: r.user.is_staff
+EXPLORER_DEFAULT_ROWS = 100
