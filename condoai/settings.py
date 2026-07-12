@@ -10,10 +10,22 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from datetime import timedelta
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Cargar variables del .env si existe
+_env_file = BASE_DIR / ".env"
+if _env_file.exists():
+    for _line in _env_file.read_text().splitlines():
+        _line = _line.strip()
+        if _line and not _line.startswith("#") and "=" in _line:
+            _k, _v = _line.split("=", 1)
+            os.environ.setdefault(_k.strip(), _v.strip())
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 SECRET_KEY = "django-insecure-o#7*9^z@yl&_sf$498kzpws5=-816ur4(93-g2s14ba*k9utp="
 DEBUG = True
