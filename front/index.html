@@ -181,7 +181,83 @@
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
             }
+            @media print {
+                body {
+                    background: white !important;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                    color-adjust: exact;
+                    overflow: visible !important;
+                    height: auto !important;
+                }
+                aside#sidebar,
+                header,
+                .no-print,
+                #ai-chatbot-container {
+                    display: none !important;
+                }
+                main {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    width: 100% !important;
+                    overflow: visible !important;
+                    height: auto !important;
+                }
+                #main-content {
+                    padding: 0 !important;
+                    overflow: visible !important;
+                    height: auto !important;
+                }
+                #reporte-pdf {
+                    padding: 16px;
+                }
+                .shadow-sm {
+                    box-shadow: none !important;
+                }
+                .bg-white {
+                    background: white !important;
+                }
+                .bg-green-500 {
+                    background-color: #22c55e !important;
+                }
+                .bg-blue-400 {
+                    background-color: #60a5fa !important;
+                }
+                .bg-green-400 {
+                    background-color: #4ade80 !important;
+                }
+                .bg-yellow-400 {
+                    background-color: #facc15 !important;
+                }
+                .bg-red-400 {
+                    background-color: #f87171 !important;
+                }
+                .bg-red-500 {
+                    background-color: #ef4444 !important;
+                }
+                .bg-blue-500 {
+                    background-color: #3b82f6 !important;
+                }
+                .bg-purple-500 {
+                    background-color: #a855f7 !important;
+                }
+                .dona-chart {
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                }
+                #tabla-morosos {
+                    break-before: page;
+                    page-break-before: always;
+                    margin-top: 0 !important;
+                    overflow: visible !important;
+                    padding-bottom: 2rem !important;
+                }
+                #tabla-morosos table {
+                    margin-bottom: 1rem;
+                }
+            }
         </style>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     </head>
     <body
         class="bg-slate-100 text-slate-800 font-sans antialiased h-screen flex overflow-hidden transition-colors duration-300"
@@ -2363,90 +2439,194 @@
                     }
 
                     if (viewName === 'adm_reportes') {
-                        const reporte =
-                            await apiService.generarReporteFinanciero();
-                        const morosos = mockDatabase.usuarios.filter(
-                            (u) => u.estado_financiero === 'moroso',
+                        const r = await apiService.generarReporteFinanciero();
+
+                        // Gráfico de barras: recaudación mensual
+                        const meses = r.recaudacionMensual || [];
+                        const maxVal = meses.length
+                            ? Math.max(...meses.map((m) => m.total), 1)
+                            : 1;
+                        const mesesES = [
+                            'Ene',
+                            'Feb',
+                            'Mar',
+                            'Abr',
+                            'May',
+                            'Jun',
+                            'Jul',
+                            'Ago',
+                            'Sep',
+                            'Oct',
+                            'Nov',
+                            'Dic',
+                        ];
+                        const barras = meses
+                            .map((m) => {
+                                const pct = Math.round(
+                                    (m.total / maxVal) * 100,
+                                );
+                                const label =
+                                    mesesES[parseInt(m.mes.split('-')[1]) - 1] +
+                                    ' ' +
+                                    m.mes.split('-')[0].slice(2);
+                                return `
+                            <div class="flex flex-col items-center gap-1 flex-1">
+                                <span class="text-[9px] text-slate-500 font-medium">S/${m.total.toFixed(0)}</span>
+                                <div class="w-full flex items-end justify-center" style="height:140px">
+                                    <div class="w-4/5 bg-blue-400 rounded-t-sm transition-all" style="height:${Math.max(pct, 2)}%"></div>
+                                </div>
+                                <span class="text-[9px] text-slate-400">${label}</span>
+                            </div>`;
+                            })
+                            .join('');
+
+                        // Dona CSS con conic-gradient
+                        const total =
+                            (r.cantidadPagos || 0) +
+                                (r.pagosPendientes || 0) +
+                                (r.pagosRechazados || 0) || 1;
+                        const pAprobPct = Math.round(
+                            (r.cantidadPagos / total) * 100,
                         );
-                        const pagosAprobados = mockDatabase.pagos.filter(
-                            (p) => p.estado === 'aprobado',
+                        const pPendPct = Math.round(
+                            (r.pagosPendientes / total) * 100,
                         );
-                        const pagosPorMes = {};
-                        pagosAprobados.forEach((p) => {
-                            const mes = p.fecha.substring(0, 7);
-                            pagosPorMes[mes] =
-                                (pagosPorMes[mes] || 0) + p.monto;
-                        });
+                        const pRechPct = 100 - pAprobPct - pPendPct;
+                        const donaGrad = `conic-gradient(#4ade80 0% ${pAprobPct}%, #facc15 ${pAprobPct}% ${pAprobPct + pPendPct}%, #f87171 ${pAprobPct + pPendPct}% 100%)`;
+
+                        const varSign = r.variacionMesAnterior >= 0 ? '▲' : '▼';
+                        const varColor =
+                            r.variacionMesAnterior >= 0
+                                ? 'text-green-600 bg-green-50'
+                                : 'text-red-600 bg-red-50';
 
                         html = `
-                        <div class="flex justify-between items-center mb-6 fade-in">
-                            <h2 class="text-2xl font-bold text-dark">📊 Reportes Financieros (HU05)</h2>
-                            <span class="bg-green-500 text-white text-xs px-3 py-1 rounded-full">100%</span>
-                        </div>
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 fade-in">
-                            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                                <h3 class="font-bold text-lg mb-4">Resumen General</h3>
-                                <div class="space-y-3">
-                                    <div class="flex justify-between border-b border-slate-100 pb-2">
-                                        <span class="text-slate-600">Total recaudado</span>
-                                        <span class="font-bold text-2xl text-green-600">S/ ${reporte.totalRecaudado.toFixed(2)}</span>
-                                    </div>
-                                    <div class="flex justify-between border-b border-slate-100 pb-2">
-                                        <span class="text-slate-600">Pagos aprobados</span>
-                                        <span class="font-bold">${reporte.cantidadPagos}</span>
-                                    </div>
-                                    <div class="flex justify-between border-b border-slate-100 pb-2">
-                                        <span class="text-slate-600">Residentes morosos</span>
-                                        <span class="font-bold text-red-600">${reporte.morosos}</span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-slate-600">Fecha de generación</span>
-                                        <span class="text-slate-500 text-sm">${reporte.fechaGeneracion}</span>
-                                    </div>
+                        <div id="reporte-pdf" class="space-y-6 fade-in">
+                            <!-- Header -->
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xl">📊</span>
+                                    <h2 class="text-xl font-bold text-dark">Reportes Financieros (HU05)</h2>
                                 </div>
-                                <button onclick="app.exportarReporte()" class="mt-6 bg-primary hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm transition-colors w-full">
-                                    <i class="fa-solid fa-file-pdf mr-2"></i> Exportar a PDF
-                                </button>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-slate-400">Generado: ${r.fechaGeneracion}</span>
+                                    <span class="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">100%</span>
+                                    <button onclick="app.exportarReporte()" class="flex items-center gap-2 bg-primary hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg transition-colors shadow-sm">
+                                        <i class="fa-solid fa-file-pdf"></i> Exportar PDF
+                                    </button>
+                                </div>
                             </div>
-                            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                                <h3 class="font-bold text-lg mb-4">📈 Recaudación por Mes</h3>
-                                ${
-                                    Object.keys(pagosPorMes).length === 0
-                                        ? '<p class="text-slate-500 text-center py-8">No hay datos disponibles</p>'
-                                        : `<div class="space-y-3">
-                                        ${Object.entries(pagosPorMes)
-                                            .map(
-                                                ([mes, total]) => `
-                                            <div>
-                                                <div class="flex justify-between text-sm mb-1">
-                                                    <span>${mes}</span>
-                                                    <span class="font-bold">S/ ${total.toFixed(2)}</span>
-                                                </div>
-                                                <div class="w-full bg-slate-200 rounded-full h-2">
-                                                    <div class="bg-blue-600 h-2 rounded-full" style="width: ${Math.min((total / Math.max(...Object.values(pagosPorMes))) * 100, 100)}%"></div>
-                                                </div>
-                                            </div>
-                                        `,
-                                            )
-                                            .join('')}
-                                    </div>`
-                                }
-                                <div class="mt-6 p-4 bg-slate-50 rounded-lg">
-                                    <p class="text-sm text-slate-600">👤 Residentes morosos:</p>
+
+                            <!-- KPIs -->
+                            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm relative overflow-hidden">
+                                    <div class="absolute left-0 top-0 bottom-0 w-1 bg-green-500"></div>
+                                    <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Total Recaudado</h3>
+                                    <p class="text-2xl font-bold text-green-600 mb-1">S/ ${r.totalRecaudado.toFixed(2)}</p>
+                                    <p class="text-xs text-slate-400">Pagos aprobados</p>
+                                </div>
+                                <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm relative overflow-hidden">
+                                    <div class="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>
+                                    <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Pagos Aprobados</h3>
+                                    <p class="text-2xl font-bold text-blue-600 mb-1">${r.cantidadPagos}</p>
+                                    <p class="text-xs text-slate-400">Transacciones exitosas</p>
+                                </div>
+                                <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm relative overflow-hidden">
+                                    <div class="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>
+                                    <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Residentes Morosos</h3>
+                                    <p class="text-2xl font-bold text-red-500 mb-1">${r.morosos}</p>
+                                    <p class="text-xs text-slate-400">Con deuda activa</p>
+                                </div>
+                                <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm relative overflow-hidden">
+                                    <div class="absolute left-0 top-0 bottom-0 w-1 bg-purple-500"></div>
+                                    <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Tasa de Morosidad</h3>
+                                    <p class="text-2xl font-bold text-purple-600 mb-1">${r.tasaMorosidad}%</p>
+                                    <p class="text-xs text-slate-400">Del total de residentes</p>
+                                </div>
+                            </div>
+
+                            <!-- Gráficos -->
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <!-- Barras: Recaudación mensual -->
+                                <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm lg:col-span-2">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div class="flex items-center gap-2">
+                                            <span>📈</span>
+                                            <h3 class="font-bold text-dark">Recaudación Mensual</h3>
+                                        </div>
+                                        <span class="text-xs font-semibold px-2 py-1 rounded ${varColor}">${varSign} ${Math.abs(r.variacionMesAnterior)}% vs mes anterior</span>
+                                    </div>
                                     ${
-                                        morosos.length === 0
-                                            ? '<p class="text-sm text-green-600">✅ No hay morosos</p>'
-                                            : morosos
-                                                  .map(
-                                                      (u) =>
-                                                          `<p class="text-sm text-red-600">• ${u.nombre} - Dpto ${u.dpto} - Deuda: S/ ${u.deuda}</p>`,
-                                                  )
-                                                  .join('')
+                                        meses.length === 0
+                                            ? '<p class="text-slate-400 text-center py-16">Sin datos de pagos aún</p>'
+                                            : `<div class="flex items-end gap-1 h-48 border-b border-l border-slate-100 px-2 pt-2">${barras}</div>`
                                     }
                                 </div>
+
+                                <!-- Dona: Distribución -->
+                                <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex flex-col">
+                                    <div class="flex items-center gap-2 mb-4">
+                                        <span>📊</span>
+                                        <h3 class="font-bold text-dark">Distribución de Pagos</h3>
+                                    </div>
+                                    <div class="flex justify-center items-center my-4">
+                                        <div class="relative w-36 h-36 rounded-full dona-chart" style="background:${donaGrad}">
+                                            <div class="absolute inset-[22%] bg-white rounded-full flex items-center justify-center">
+                                                <span class="text-xs font-bold text-slate-600">${total} total</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-center gap-3 text-[10px] text-slate-500 mb-4">
+                                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-green-400 inline-block"></span>Aprobados</span>
+                                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block"></span>Pendientes</span>
+                                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-400 inline-block"></span>Rechazados</span>
+                                    </div>
+                                    <div class="mt-auto space-y-2 border-t border-slate-100 pt-3">
+                                        <div class="flex justify-between text-xs"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span><span class="text-slate-600">Aprobados</span></div><span class="font-bold">${r.cantidadPagos}</span></div>
+                                        <div class="flex justify-between text-xs"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span><span class="text-slate-600">Pendientes</span></div><span class="font-bold">${r.pagosPendientes}</span></div>
+                                        <div class="flex justify-between text-xs"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span><span class="text-slate-600">Rechazados</span></div><span class="font-bold">${r.pagosRechazados}</span></div>
+                                    </div>
+                                </div>
                             </div>
+
+                            <!-- Lista morosos -->
+                            ${
+                                r.listaMorosos && r.listaMorosos.length > 0
+                                    ? `
+                            <div id="tabla-morosos" class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                                <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+                                    <i class="fa-solid fa-triangle-exclamation text-red-500"></i>
+                                    <h3 class="font-bold text-dark">Residentes con Deuda Activa</h3>
+                                    <span class="ml-auto bg-red-100 text-red-700 text-xs font-semibold px-2 py-0.5 rounded-full">${r.morosos}</span>
+                                </div>
+                                <table class="min-w-full divide-y divide-slate-100">
+                                    <thead class="bg-slate-50"><tr>
+                                        <th class="px-6 py-5 text-left text-xs font-medium text-slate-500 uppercase">Residente</th>
+                                        <th class="px-6 py-5 text-left text-xs font-medium text-slate-500 uppercase">Departamento</th>
+                                        <th class="px-6 py-5 text-left text-xs font-medium text-slate-500 uppercase">Estado</th>
+                                    </tr></thead>
+                                    <tbody class="divide-y divide-slate-100 pb-4">
+                                        ${r.listaMorosos
+                                            .map(
+                                                (m) => `
+                                        <tr>
+                                            <td class="px-6 py-4 text-sm font-medium text-dark">${m.nombre}</td>
+                                            <td class="px-6 py-4 text-sm text-slate-600">Dpto. ${m.dpto}</td>
+                                            <td class="px-6 py-4"><span class="bg-red-100 text-red-700 text-xs font-semibold px-2 py-1 rounded-full">Moroso</span></td>
+                                        </tr>`,
+                                            )
+                                            .join('')}
+                                        <tr><td colspan="3" class="py-3"></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>`
+                                    : `
+                            <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-green-700 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-circle-check"></i> ¡Todos los residentes están al día!
+                            </div>`
+                            }
                         </div>
-                    `;
+                        `;
                     }
 
                     // --- NUEVA VISTA: SOLICITUDES DE REGISTRO ---
@@ -2832,34 +3012,309 @@
                     }
                 },
 
-                exportarReporte: () => {
-                    const reporte = mockDatabase.reportes[
-                        mockDatabase.reportes.length - 1
-                    ] || { totalRecaudado: 0, cantidadPagos: 0, morosos: 0 };
-                    const contenido = `
-========================================
-  REPORTE FINANCIERO - CONDOMINIO IA
-========================================
-Fecha: ${new Date().toLocaleString()}
-----------------------------------------
-Total Recaudado: S/ ${reporte.totalRecaudado.toFixed(2)}
-Pagos Aprobados: ${reporte.cantidadPagos}
-Residentes Morosos: ${reporte.morosos}
-----------------------------------------
-Generado por: ${app.currentUser?.nombre || 'Administrador'}
-========================================
-                `;
-                    console.log('📄 REPORTE EXPORTADO:\n', contenido);
-                    app.showToast(
-                        '📄 Reporte generado en consola (simulación PDF)',
-                        'success',
-                    );
+                exportarReporte: async () => {
+                    const btn = document.querySelector('#reporte-pdf button');
+                    const originalHTML = btn?.innerHTML || '';
+                    if (btn)
+                        btn.innerHTML =
+                            '<i class="fa-solid fa-spinner fa-spin"></i> Generando...';
 
-                    const blob = new Blob([contenido], { type: 'text/plain' });
-                    const a = document.createElement('a');
-                    a.href = URL.createObjectURL(blob);
-                    a.download = `reporte_financiero_${new Date().toISOString().split('T')[0]}.txt`;
-                    a.click();
+                    let r;
+                    try {
+                        r = await apiService.generarReporteFinanciero();
+                    } catch (e) {
+                        app.showToast('Error al obtener datos', 'error');
+                        if (btn) btn.innerHTML = originalHTML;
+                        return;
+                    }
+
+                    const mesesES = [
+                        'Ene',
+                        'Feb',
+                        'Mar',
+                        'Abr',
+                        'May',
+                        'Jun',
+                        'Jul',
+                        'Ago',
+                        'Sep',
+                        'Oct',
+                        'Nov',
+                        'Dic',
+                    ];
+                    const meses = r.recaudacionMensual || [];
+                    const total =
+                        (r.cantidadPagos || 0) +
+                            (r.pagosPendientes || 0) +
+                            (r.pagosRechazados || 0) || 1;
+
+                    // --- Gráfico de barras en Canvas ---
+                    const barImg = (() => {
+                        const W = 560,
+                            H = 160,
+                            PAD = 36,
+                            BAR_AREA_H = 110;
+                        const c = document.createElement('canvas');
+                        c.width = W;
+                        c.height = H;
+                        const ctx = c.getContext('2d');
+                        ctx.fillStyle = '#f8fafc';
+                        ctx.fillRect(0, 0, W, H);
+
+                        if (meses.length === 0) {
+                            ctx.fillStyle = '#94a3b8';
+                            ctx.font = '13px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText(
+                                'Sin datos de pagos aún',
+                                W / 2,
+                                H / 2,
+                            );
+                            return c.toDataURL('image/png');
+                        }
+
+                        const maxVal = Math.max(
+                            ...meses.map((m) => m.total),
+                            1,
+                        );
+                        const colW = (W - PAD * 2) / meses.length;
+                        const barW = Math.min(colW * 0.5, 32);
+                        const COLORS = [
+                            '#3b82f6',
+                            '#6366f1',
+                            '#8b5cf6',
+                            '#06b6d4',
+                            '#10b981',
+                            '#f59e0b',
+                            '#ef4444',
+                            '#ec4899',
+                            '#84cc16',
+                            '#f97316',
+                            '#14b8a6',
+                            '#a78bfa',
+                        ];
+
+                        // Ejes
+                        ctx.strokeStyle = '#cbd5e1';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(PAD, 10);
+                        ctx.lineTo(PAD, H - 28);
+                        ctx.lineTo(W - PAD, H - 28);
+                        ctx.stroke();
+
+                        meses.forEach((m, i) => {
+                            const x = PAD + colW * i + colW / 2;
+                            const barH = Math.max(
+                                (m.total / maxVal) * BAR_AREA_H,
+                                3,
+                            );
+                            const y = H - 28 - barH;
+                            // barra con color
+                            ctx.fillStyle = COLORS[i % COLORS.length];
+                            ctx.beginPath();
+                            ctx.roundRect
+                                ? ctx.roundRect(
+                                      x - barW / 2,
+                                      y,
+                                      barW,
+                                      barH,
+                                      [3, 3, 0, 0],
+                                  )
+                                : ctx.rect(x - barW / 2, y, barW, barH);
+                            ctx.fill();
+                            // valor encima
+                            ctx.fillStyle = '#475569';
+                            ctx.font = 'bold 8px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('S/' + m.total.toFixed(0), x, y - 4);
+                            // label abajo
+                            const label =
+                                mesesES[parseInt(m.mes.split('-')[1]) - 1] +
+                                "'" +
+                                m.mes.split('-')[0].slice(2);
+                            ctx.fillStyle = '#94a3b8';
+                            ctx.font = '8px Arial';
+                            ctx.fillText(label, x, H - 14);
+                        });
+                        return c.toDataURL('image/png');
+                    })();
+
+                    // --- Gráfico dona en Canvas ---
+                    const donaImg = (() => {
+                        const S = 180;
+                        const c = document.createElement('canvas');
+                        c.width = S;
+                        c.height = S;
+                        const ctx = c.getContext('2d');
+                        ctx.fillStyle = '#f8fafc';
+                        ctx.fillRect(0, 0, S, S);
+
+                        const cx = S / 2,
+                            cy = S / 2,
+                            R = 72,
+                            r = 42;
+                        const segmentos = [
+                            { val: r.cantidadPagos || 0, color: '#3b82f6' },
+                            { val: r.pagosPendientes || 0, color: '#f59e0b' },
+                            { val: r.pagosRechazados || 0, color: '#ef4444' },
+                        ];
+                        let angle = -Math.PI / 2;
+                        segmentos.forEach((s) => {
+                            if (s.val === 0) return;
+                            const sweep = (s.val / total) * Math.PI * 2;
+                            ctx.beginPath();
+                            ctx.moveTo(cx, cy);
+                            ctx.arc(cx, cy, R, angle, angle + sweep);
+                            ctx.closePath();
+                            ctx.fillStyle = s.color;
+                            ctx.fill();
+                            angle += sweep;
+                        });
+                        // hueco central
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                        ctx.fillStyle = '#f8fafc';
+                        ctx.fill();
+                        // número central
+                        ctx.fillStyle = '#1e293b';
+                        ctx.font = 'bold 14px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(total, cx, cy);
+                        return c.toDataURL('image/png');
+                    })();
+
+                    const morososHTML = (r.listaMorosos || [])
+                        .map(
+                            (m, i) => `
+                        <tr style="background:${i % 2 === 0 ? '#fff' : '#f8fafc'}">
+                            <td style="padding:9px 16px;font-size:12px;color:#1e293b;border-bottom:1px solid #f1f5f9">${m.nombre}</td>
+                            <td style="padding:9px 16px;font-size:12px;color:#475569;border-bottom:1px solid #f1f5f9">Dpto. ${m.dpto}</td>
+                            <td style="padding:9px 16px;border-bottom:1px solid #f1f5f9"><span style="background:#f1f5f9;color:#475569;font-size:11px;font-weight:600;padding:3px 10px;border-radius:4px;border:1px solid #e2e8f0">Pendiente</span></td>
+                        </tr>`,
+                        )
+                        .join('');
+
+                    const contenidoPDF = `
+                    <div style="font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;padding:40px;background:#fff">
+
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;border-bottom:2px solid #1e293b;margin-bottom:26px">
+                            <div>
+                                <div style="font-size:20px;font-weight:700;color:#1e293b">CondoAI</div>
+                                <div style="font-size:11px;color:#64748b;margin-top:3px">Sistema de Gestión de Condominios</div>
+                            </div>
+                            <div style="text-align:right">
+                                <div style="font-size:15px;font-weight:600;color:#1e293b">Reporte Financiero</div>
+                                <div style="font-size:11px;color:#64748b;margin-top:4px">${r.fechaGeneracion}</div>
+                                <div style="font-size:10px;color:#94a3b8;margin-top:2px">Generado por: ${app.currentUser?.nombre || 'Administrador'}</div>
+                            </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:26px">
+                            <div style="background:#f8fafc;border-radius:6px;padding:14px 16px;border-top:3px solid #3b82f6">
+                                <div style="font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Total Recaudado</div>
+                                <div style="font-size:20px;font-weight:700;color:#1e293b">S/ ${r.totalRecaudado.toFixed(2)}</div>
+                                <div style="font-size:9px;color:#94a3b8;margin-top:4px">Pagos aprobados</div>
+                            </div>
+                            <div style="background:#f8fafc;border-radius:6px;padding:14px 16px;border-top:3px solid #10b981">
+                                <div style="font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Pagos Aprobados</div>
+                                <div style="font-size:20px;font-weight:700;color:#1e293b">${r.cantidadPagos}</div>
+                                <div style="font-size:9px;color:#94a3b8;margin-top:4px">Transacciones exitosas</div>
+                            </div>
+                            <div style="background:#f8fafc;border-radius:6px;padding:14px 16px;border-top:3px solid #ef4444">
+                                <div style="font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Residentes Morosos</div>
+                                <div style="font-size:20px;font-weight:700;color:#1e293b">${r.morosos}</div>
+                                <div style="font-size:9px;color:#94a3b8;margin-top:4px">Con deuda activa</div>
+                            </div>
+                            <div style="background:#f8fafc;border-radius:6px;padding:14px 16px;border-top:3px solid #f59e0b">
+                                <div style="font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Tasa de Morosidad</div>
+                                <div style="font-size:20px;font-weight:700;color:#1e293b">${r.tasaMorosidad}%</div>
+                                <div style="font-size:9px;color:#94a3b8;margin-top:4px">Del total de residentes</div>
+                            </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:26px">
+                            <div style="background:#f8fafc;border-radius:6px;padding:18px">
+                                <div style="font-weight:600;font-size:11px;color:#1e293b;margin-bottom:12px;text-transform:uppercase;letter-spacing:.04em">Recaudación Mensual</div>
+                                <img src="${barImg}" style="width:100%;height:auto;display:block"/>
+                            </div>
+                            <div style="background:#f8fafc;border-radius:6px;padding:18px">
+                                <div style="font-weight:600;font-size:11px;color:#1e293b;margin-bottom:12px;text-transform:uppercase;letter-spacing:.04em">Distribución de Pagos</div>
+                                <div style="display:flex;justify-content:center;margin-bottom:12px">
+                                    <img src="${donaImg}" style="width:120px;height:120px"/>
+                                </div>
+                                <div style="font-size:11px;color:#475569">
+                                    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #e2e8f0">
+                                        <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:9px;height:9px;background:#3b82f6;border-radius:2px"></span>Aprobados</span><strong>${r.cantidadPagos}</strong>
+                                    </div>
+                                    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #e2e8f0">
+                                        <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:9px;height:9px;background:#f59e0b;border-radius:2px"></span>Pendientes</span><strong>${r.pagosPendientes}</strong>
+                                    </div>
+                                    <div style="display:flex;justify-content:space-between;padding:5px 0">
+                                        <span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:9px;height:9px;background:#ef4444;border-radius:2px"></span>Rechazados</span><strong>${r.pagosRechazados}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${
+                            r.morosos > 0
+                                ? `
+                        <div style="border-radius:6px;overflow:hidden;border:1px solid #e2e8f0">
+                            <div style="background:#f8fafc;padding:12px 18px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:8px">
+                                <span style="font-weight:600;font-size:11px;color:#1e293b;text-transform:uppercase;letter-spacing:.04em">Residentes con Deuda Activa</span>
+                                <span style="margin-left:auto;background:#e2e8f0;color:#475569;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px">${r.morosos}</span>
+                            </div>
+                            <table style="width:100%;border-collapse:collapse;background:white">
+                                <thead><tr style="background:#f8fafc">
+                                    <th style="padding:9px 16px;text-align:left;font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e2e8f0">Residente</th>
+                                    <th style="padding:9px 16px;text-align:left;font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e2e8f0">Departamento</th>
+                                    <th style="padding:9px 16px;text-align:left;font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e2e8f0">Estado</th>
+                                </tr></thead>
+                                <tbody>${morososHTML}</tbody>
+                            </table>
+                        </div>`
+                                : `
+                        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:14px 18px;color:#475569;font-size:12px">
+                            Todos los residentes se encuentran al dia con sus pagos.
+                        </div>`
+                        }
+
+                        <div style="margin-top:36px;padding-top:12px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:9px;color:#94a3b8">
+                            <span>CondoAI · Sistema de Gestión de Condominios</span>
+                            <span>Documento confidencial · ${r.fechaGeneracion}</span>
+                        </div>
+                    </div>`;
+
+                    const elemento = document.createElement('div');
+                    elemento.innerHTML = contenidoPDF;
+                    document.body.appendChild(elemento);
+
+                    const fecha = new Date().toISOString().split('T')[0];
+                    await html2pdf()
+                        .set({
+                            margin: 0,
+                            filename: `reporte_financiero_${fecha}.pdf`,
+                            image: { type: 'jpeg', quality: 0.98 },
+                            html2canvas: {
+                                scale: 2,
+                                useCORS: true,
+                                backgroundColor: '#ffffff',
+                            },
+                            jsPDF: {
+                                unit: 'mm',
+                                format: 'a4',
+                                orientation: 'portrait',
+                            },
+                            pagebreak: { mode: ['avoid-all', 'css'] },
+                        })
+                        .from(elemento)
+                        .save();
+
+                    document.body.removeChild(elemento);
+                    if (btn) btn.innerHTML = originalHTML;
+                    app.showToast('📄 PDF generado y descargado', 'success');
                 },
 
                 // --- NUEVAS ACCIONES: GENERAR INVITACIÓN Y APROBAR/RECHAZAR ---
