@@ -153,11 +153,15 @@
             }
             .calendar-day.reserved {
                 background: #fef2f2;
-                color: #dc2626;
+                color: #dc2626 !important;
+            }
+            .calendar-day.partial {
+                background: #fefce8;
+                color: #eab308 !important;
             }
             .calendar-day.available {
                 background: #f0fdf4;
-                color: #16a34a;
+                color: #16a34a !important;
             }
             .calendar-day.today {
                 border: 2px solid #3b82f6;
@@ -168,6 +172,10 @@
             .dark .calendar-day.reserved {
                 background: #7f1d1d;
                 color: #fca5a5;
+            }
+            .dark .calendar-day.partial {
+                background: #78350f;
+                color: #fde68a;
             }
             .dark .calendar-day.available {
                 background: #14532d;
@@ -1211,6 +1219,16 @@
                     return res.json();
                 },
 
+                getReservas: async ({ area } = {}) => {
+                    const params = area
+                        ? `?area=${encodeURIComponent(area)}`
+                        : '';
+                    const res = await authFetch(
+                        `${API_BASE}/reservas/${params}`,
+                    );
+                    return res.json();
+                },
+
                 getAllReservas: async () => {
                     const res = await authFetch(`${API_BASE}/reservas/`);
                     return res.json();
@@ -1926,7 +1944,22 @@
                                 apiService.getAllReservas(),
                                 apiService.getAreas(),
                             ]);
-                        const reservas = misReservas;
+                        const todayStr2 = new Date()
+                            .toISOString()
+                            .split('T')[0];
+                        const reservas = [...misReservas].sort((a, b) => {
+                            // Próximas primero (fecha+hora >= hoy), luego pasadas más recientes
+                            const aKey =
+                                a.fecha + ' ' + (a.hora_inicio || '00:00');
+                            const bKey =
+                                b.fecha + ' ' + (b.hora_inicio || '00:00');
+                            const aFut = a.fecha >= todayStr2;
+                            const bFut = b.fecha >= todayStr2;
+                            if (aFut && !bFut) return -1;
+                            if (!aFut && bFut) return 1;
+                            if (aFut) return aKey < bKey ? -1 : 1; // futuras: más próxima primero
+                            return aKey > bKey ? -1 : 1; // pasadas: más reciente primero
+                        });
                         const isMoroso =
                             app.currentUser.estado_financiero === 'moroso';
 
@@ -1966,6 +1999,7 @@
 
                         // Estado global del calendario (mes navegable)
                         window._reservasData = todasReservas;
+                        window._calAreas = areas;
                         window._calMeta = {
                             viewYear: currentYear,
                             viewMonth: currentMonth,
@@ -1993,6 +2027,36 @@
                         const initialLabel = `${mesesES[currentMonth]} ${currentYear}`;
 
                         // Generar celdas iniciales
+                        // Helper: calcula el estado de un día según sus reservas por horas
+                        const getDayStatus = (dStr, areaNombre, reservas) => {
+                            const areaObj = areas.find(
+                                (a) => a.nombre === areaNombre,
+                            );
+                            const hiArea = areaObj?.horario_inicio || '08:00';
+                            const hfArea = areaObj?.horario_fin || '22:00';
+                            const resDelDia = reservas.filter(
+                                (r) =>
+                                    r.fecha === dStr &&
+                                    r.area === areaNombre &&
+                                    r.estado !== 'cancelada',
+                            );
+                            if (resDelDia.length === 0) return 'available';
+
+                            // Calcular minutos totales disponibles y ocupados
+                            const toMin = (t) => {
+                                const [h, m] = t.split(':').map(Number);
+                                return h * 60 + m;
+                            };
+                            const totalMin = toMin(hfArea) - toMin(hiArea);
+                            let ocupadoMin = 0;
+                            resDelDia.forEach((r) => {
+                                ocupadoMin +=
+                                    toMin(r.hora_fin) - toMin(r.hora_inicio);
+                            });
+                            if (ocupadoMin >= totalMin) return 'reserved';
+                            return 'partial';
+                        };
+
                         const buildInitialCells = () => {
                             const fd = new Date(
                                 currentYear,
@@ -2009,11 +2073,10 @@
                                 cells += `<div class="text-center py-2"></div>`;
                             for (let day = 1; day <= dim; day++) {
                                 const dStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                                const isRes = todasReservas.some(
-                                    (r) =>
-                                        r.fecha === dStr &&
-                                        r.area === primeraArea &&
-                                        r.estado !== 'cancelada',
+                                const status = getDayStatus(
+                                    dStr,
+                                    primeraArea,
+                                    todasReservas,
                                 );
                                 const past = dStr < todayStr;
                                 const isToday2 =
@@ -2021,15 +2084,19 @@
                                     currentMonth === today.getMonth();
                                 const dc = past
                                     ? 'opacity-40 cursor-not-allowed'
-                                    : isRes
-                                      ? 'reserved'
-                                      : 'available';
+                                    : status;
                                 const tc = isToday2 ? 'today' : '';
+                                const icon =
+                                    !past && status === 'reserved'
+                                        ? '<span class="block text-[8px]">🔴</span>'
+                                        : !past && status === 'partial'
+                                          ? '<span class="block text-[8px]">🟡</span>'
+                                          : '';
                                 const click =
                                     !past && !isMoroso
-                                        ? `onclick="document.getElementById('res-fecha').value='${dStr}'; document.querySelectorAll('.calendar-day').forEach(el=>el.classList.remove('ring-2','ring-primary')); this.classList.add('ring-2','ring-primary');"`
+                                        ? `onclick="document.getElementById('res-fecha').value='${dStr}'; document.querySelectorAll('.calendar-day').forEach(el=>el.classList.remove('ring-2','ring-primary')); this.classList.add('ring-2','ring-primary'); app.actualizarHorasDisponibles();"`
                                         : '';
-                                cells += `<div class="calendar-day ${dc} ${tc} text-center py-2 rounded text-sm font-medium transition" ${click} title="${dStr}">${day}${isRes && !past ? '<span class="block text-[8px] text-red-500">🔴</span>' : ''}</div>`;
+                                cells += `<div class="calendar-day ${dc} ${tc} text-center py-2 rounded text-sm font-medium transition" ${click} title="${dStr}">${day}${icon}</div>`;
                             }
                             return cells;
                         };
@@ -2065,15 +2132,29 @@
                                         <div>
                                             <label class="block text-sm font-medium text-dark mb-1">Área Común (HU11)</label>
                                             <select id="res-area" ${isMoroso ? 'disabled' : ''} onchange="app.actualizarCalendario(this.value)" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent disabled:bg-slate-100">
-                                                ${areas.map((a) => `<option value="${a.nombre}">${a.nombre} (Cap: ${a.capacidad})</option>`).join('')}
+                                                ${areas.map((a) => `<option value="${a.nombre}" data-inicio="${a.horario_inicio || '08:00'}" data-fin="${a.horario_fin || '22:00'}">${a.nombre} (Cap: ${a.capacidad})</option>`).join('')}
                                             </select>
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-dark mb-1">Fecha</label>
-                                            <input type="date" id="res-fecha" required ${isMoroso ? 'disabled' : ''} min="${new Date().toISOString().split('T')[0]}" class="w-full border border-slate-300 rounded-lg px-3 py-2 disabled:bg-slate-100">
+                                            <input type="date" id="res-fecha" required ${isMoroso ? 'disabled' : ''} min="${new Date().toISOString().split('T')[0]}" value="${new Date().toISOString().split('T')[0]}" class="w-full border border-slate-300 rounded-lg px-3 py-2 disabled:bg-slate-100" onchange="app.actualizarHorasDisponibles()">
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-sm font-medium text-dark mb-1">Hora inicio</label>
+                                                <select id="res-hora-inicio" required ${isMoroso ? 'disabled' : ''} class="w-full border border-slate-300 rounded-lg px-3 py-2 disabled:bg-slate-100" onchange="app.actualizarHoraFin()"></select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm font-medium text-dark mb-1">Hora fin</label>
+                                                <select id="res-hora-fin" required ${isMoroso ? 'disabled' : ''} class="w-full border border-slate-300 rounded-lg px-3 py-2 disabled:bg-slate-100"></select>
+                                            </div>
+                                        </div>
+                                        <div id="horarios-ocupados" class="text-xs text-slate-500 hidden">
+                                            <p class="font-semibold text-slate-600 mb-1">⏰ Horarios ya reservados este día:</p>
+                                            <div id="lista-horarios-ocupados" class="space-y-1"></div>
                                         </div>
                                         <button type="submit" ${isMoroso ? 'disabled' : ''} class="w-full ${isMoroso ? 'bg-slate-400 cursor-not-allowed' : 'bg-primary hover:bg-blue-700'} text-white font-medium py-2 px-4 rounded-lg transition-colors">
-                                            Confirmar Reserva
+                                            Reservar
                                         </button>
                                     </form>
                                     <p class="text-xs text-slate-400 mt-3 text-center">📬 Recibirás notificaciones de confirmación (HU15)</p>
@@ -2098,7 +2179,8 @@
                                     </div>
                                     <div class="flex gap-4 mt-4 text-xs">
                                         <span class="flex items-center"><span class="w-3 h-3 bg-green-100 border border-green-300 rounded mr-1"></span> Disponible</span>
-                                        <span class="flex items-center"><span class="w-3 h-3 bg-red-100 border border-red-300 rounded mr-1"></span> Reservado</span>
+                                        <span class="flex items-center"><span class="w-3 h-3 bg-yellow-100 border border-yellow-300 rounded mr-1"></span> Parcial</span>
+                                        <span class="flex items-center"><span class="w-3 h-3 bg-red-100 border border-red-300 rounded mr-1"></span> Completo</span>
                                         <span class="flex items-center"><span class="w-3 h-3 border-2 border-blue-500 rounded mr-1"></span> Hoy</span>
                                     </div>
                                 </div>
@@ -2849,6 +2931,33 @@
 
                     container.innerHTML = html;
                     container.scrollTop = 0;
+
+                    // Inicializar slots de hora si estamos en la vista de reservas
+                    if (viewName === 'res_reservas') {
+                        setTimeout(() => {
+                            const areaEl = document.getElementById('res-area');
+                            if (!areaEl) return;
+                            const opt = areaEl.selectedOptions[0];
+                            const inicio = opt?.dataset?.inicio || '08:00';
+                            const fin = opt?.dataset?.fin || '22:00';
+                            const slots = app._generarSlots(inicio, fin);
+                            const sel1 =
+                                document.getElementById('res-hora-inicio');
+                            const sel2 =
+                                document.getElementById('res-hora-fin');
+                            if (sel1)
+                                sel1.innerHTML = slots
+                                    .filter((s) => s !== fin)
+                                    .map(
+                                        (s) =>
+                                            `<option value="${s}">${s}</option>`,
+                                    )
+                                    .join('');
+                            if (sel2) app.actualizarHoraFin();
+                            // Cargar horarios ocupados del día actual
+                            app.actualizarHorasDisponibles();
+                        }, 50);
+                    }
                 },
 
                 // ==========================================
@@ -2935,32 +3044,212 @@
                     e.preventDefault();
                     const area = document.getElementById('res-area').value;
                     const fecha = document.getElementById('res-fecha').value;
-                    const btn = e.target.querySelector('button');
-                    const originalText = btn.innerHTML;
+                    const horaInicio =
+                        document.getElementById('res-hora-inicio')?.value;
+                    const horaFin =
+                        document.getElementById('res-hora-fin')?.value;
 
                     if (!fecha) {
+                        app.showToast('❌ Selecciona una fecha.', 'error');
+                        return;
+                    }
+                    if (!horaInicio || !horaFin) {
                         app.showToast(
-                            '❌ Selecciona una fecha en el calendario o en el campo de fecha.',
+                            '❌ Selecciona hora de inicio y fin.',
                             'error',
                         );
                         return;
                     }
 
-                    btn.innerHTML =
-                        '<i class="fa-solid fa-circle-notch fa-spin"></i> Validando...';
+                    // Mostrar modal de confirmación
+                    const [y, m, d] = fecha.split('-');
+                    const fechaLegible = `${d}/${m}/${y}`;
+                    const modal = document.createElement('div');
+                    modal.id = 'modal-confirmar-reserva';
+                    modal.className =
+                        'fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm';
+                    modal.innerHTML = `
+                        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 fade-in">
+                            <div class="text-center mb-6">
+                                <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <i class="fa-solid fa-calendar-check text-primary text-2xl"></i>
+                                </div>
+                                <h3 class="text-lg font-bold text-dark">Confirmar Reserva</h3>
+                                <p class="text-sm text-slate-500 mt-1">¿Deseas reservar lo siguiente?</p>
+                            </div>
+                            <div class="bg-slate-50 rounded-xl p-4 space-y-3 mb-6 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-slate-500">Área</span>
+                                    <span class="font-semibold text-dark">${area}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-500">Fecha</span>
+                                    <span class="font-semibold text-dark">${fechaLegible}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-500">Horario</span>
+                                    <span class="font-semibold text-dark">${horaInicio} – ${horaFin}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-500">Residente</span>
+                                    <span class="font-semibold text-dark">${app.currentUser?.nombre || ''}</span>
+                                </div>
+                            </div>
+                            <div class="flex gap-3">
+                                <button id="modal-cancelar" class="flex-1 border border-slate-300 text-slate-600 font-medium py-2 rounded-lg hover:bg-slate-50 transition-colors">
+                                    Cancelar
+                                </button>
+                                <button id="modal-confirmar" class="flex-1 bg-primary hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-colors">
+                                    <i class="fa-solid fa-check mr-1"></i> Confirmar
+                                </button>
+                            </div>
+                        </div>`;
+                    document.body.appendChild(modal);
 
-                    try {
-                        await apiService.registrarReserva({
-                            residente_id: app.currentUser.id,
-                            area,
-                            fecha,
-                        });
-                        app.showToast('✅ Reserva confirmada con éxito.');
-                        app.renderView('res_reservas');
-                    } catch (err) {
-                        app.showToast(`❌ ${err}`, 'error');
-                        btn.innerHTML = originalText;
+                    // Cerrar al click fuera
+                    modal.addEventListener('click', (ev) => {
+                        if (ev.target === modal) modal.remove();
+                    });
+                    document.getElementById('modal-cancelar').onclick = () =>
+                        modal.remove();
+
+                    document.getElementById('modal-confirmar').onclick =
+                        async () => {
+                            const btnConf =
+                                document.getElementById('modal-confirmar');
+                            btnConf.innerHTML =
+                                '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+                            btnConf.disabled = true;
+                            try {
+                                await apiService.registrarReserva({
+                                    residente_id: app.currentUser.id,
+                                    area,
+                                    fecha,
+                                    hora_inicio: horaInicio,
+                                    hora_fin: horaFin,
+                                });
+                                modal.remove();
+                                app.showToast(
+                                    '✅ Reserva confirmada con éxito.',
+                                );
+                                // Guardar área y fecha actuales para restaurar tras recargar
+                                window._resAreaPendiente = area;
+                                window._resFechaPendiente = fecha;
+                                await app.renderView('res_reservas');
+                                // Restaurar selección de área, fecha y horarios
+                                const areaEl =
+                                    document.getElementById('res-area');
+                                const fechaEl =
+                                    document.getElementById('res-fecha');
+                                if (areaEl && window._resAreaPendiente) {
+                                    areaEl.value = window._resAreaPendiente;
+                                    app.actualizarCalendario(
+                                        window._resAreaPendiente,
+                                    );
+                                }
+                                if (fechaEl && window._resFechaPendiente) {
+                                    fechaEl.value = window._resFechaPendiente;
+                                    app.actualizarHorasDisponibles();
+                                }
+                                window._resAreaPendiente = null;
+                                window._resFechaPendiente = null;
+                            } catch (err) {
+                                modal.remove();
+                                app.showToast(`❌ ${err}`, 'error');
+                            }
+                        };
+                },
+
+                // Genera slots de media hora dentro del rango del área
+                _generarSlots: (inicio, fin) => {
+                    const slots = [];
+                    let [h, m] = inicio.split(':').map(Number);
+                    const [hf, mf] = fin.split(':').map(Number);
+                    while (h < hf || (h === hf && m < mf)) {
+                        slots.push(
+                            `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
+                        );
+                        m += 30;
+                        if (m >= 60) {
+                            m -= 60;
+                            h++;
+                        }
                     }
+                    return slots;
+                },
+
+                actualizarHorasDisponibles: async () => {
+                    const areaEl = document.getElementById('res-area');
+                    const fecha = document.getElementById('res-fecha')?.value;
+                    if (!areaEl || !fecha) return;
+
+                    const opt = areaEl.selectedOptions[0];
+                    const inicio = opt?.dataset?.inicio || '08:00';
+                    const fin = opt?.dataset?.fin || '22:00';
+                    const slots = app._generarSlots(inicio, fin);
+
+                    // Traer reservas del día para esta área
+                    let ocupados = [];
+                    try {
+                        const res = await apiService.getReservas({
+                            area: areaEl.value,
+                        });
+                        ocupados = res.filter(
+                            (r) =>
+                                r.fecha === fecha && r.estado !== 'cancelada',
+                        );
+                    } catch (e) {}
+
+                    // Marcar bloqueados
+                    const bloqueados = new Set();
+                    ocupados.forEach((r) => {
+                        slots.forEach((s) => {
+                            if (s >= r.hora_inicio && s < r.hora_fin)
+                                bloqueados.add(s);
+                        });
+                    });
+
+                    const sel1 = document.getElementById('res-hora-inicio');
+                    const sel2 = document.getElementById('res-hora-fin');
+                    sel1.innerHTML = slots
+                        .filter((s) => !bloqueados.has(s) && s !== fin)
+                        .map((s) => `<option value="${s}">${s}</option>`)
+                        .join('');
+                    app.actualizarHoraFin();
+
+                    // Mostrar horarios ocupados
+                    const box = document.getElementById('horarios-ocupados');
+                    const lista = document.getElementById(
+                        'lista-horarios-ocupados',
+                    );
+                    if (ocupados.length > 0) {
+                        lista.innerHTML = ocupados
+                            .map(
+                                (r) =>
+                                    `<span class="inline-block bg-red-100 text-red-700 rounded px-2 py-0.5 mr-1">${r.hora_inicio}–${r.hora_fin} (${r.residente_nombre || 'otro residente'})</span>`,
+                            )
+                            .join('');
+                        box.classList.remove('hidden');
+                    } else {
+                        box.classList.add('hidden');
+                    }
+                },
+
+                actualizarHoraFin: () => {
+                    const sel1 = document.getElementById('res-hora-inicio');
+                    const sel2 = document.getElementById('res-hora-fin');
+                    const areaEl = document.getElementById('res-area');
+                    if (!sel1 || !sel2 || !areaEl) return;
+                    const opt = areaEl.selectedOptions[0];
+                    const fin = opt?.dataset?.fin || '22:00';
+                    const inicio = sel1.value;
+                    const slots = app._generarSlots(inicio, fin);
+                    // opciones de fin = slots DESPUÉS del inicio
+                    const disponibles = slots.filter((s) => s > inicio);
+                    if (fin > inicio) disponibles.push(fin);
+                    sel2.innerHTML = disponibles
+                        .map((s) => `<option value="${s}">${s}</option>`)
+                        .join('');
                 },
 
                 actualizarCalendario: (areaNombre) => {
@@ -2969,8 +3258,7 @@
                     if (!meta) return;
                     const label = document.getElementById('cal-area-nombre');
                     if (label) label.textContent = areaNombre;
-                    const inputFecha = document.getElementById('res-fecha');
-                    if (inputFecha) inputFecha.value = '';
+                    // NO limpiar la fecha — preservar la selección del usuario
                     app._renderCalGrid(
                         meta.viewYear,
                         meta.viewMonth,
@@ -2978,6 +3266,21 @@
                         reservasAll,
                         meta,
                     );
+                    // Actualizar slots de hora para el área nueva con la fecha actual
+                    const areaEl = document.getElementById('res-area');
+                    const opt = areaEl?.selectedOptions[0];
+                    const inicio = opt?.dataset?.inicio || '08:00';
+                    const fin = opt?.dataset?.fin || '22:00';
+                    const slots = app._generarSlots(inicio, fin);
+                    const sel1 = document.getElementById('res-hora-inicio');
+                    if (sel1) {
+                        sel1.innerHTML = slots
+                            .filter((s) => s !== fin)
+                            .map((s) => `<option value="${s}">${s}</option>`)
+                            .join('');
+                        app.actualizarHoraFin();
+                    }
+                    app.actualizarHorasDisponibles();
                 },
 
                 navegarCalendario: (delta) => {
@@ -3040,6 +3343,35 @@
                 ) => {
                     const grid = document.getElementById('calendar-grid');
                     if (!grid) return;
+
+                    // Helper inline para calcular estado del día
+                    const toMin = (t) => {
+                        const [h, m] = (t || '00:00').split(':').map(Number);
+                        return h * 60 + m;
+                    };
+                    const getDayStatus = (dStr) => {
+                        const resDelDia = reservasAll.filter(
+                            (r) =>
+                                r.fecha === dStr &&
+                                r.area === areaNombre &&
+                                r.estado !== 'cancelada',
+                        );
+                        if (resDelDia.length === 0) return 'available';
+                        // Intentar calcular si está lleno usando horario del área
+                        const areaData = (window._calAreas || []).find(
+                            (a) => a.nombre === areaNombre,
+                        );
+                        const hiArea = areaData?.horario_inicio || '08:00';
+                        const hfArea = areaData?.horario_fin || '22:00';
+                        const totalMin = toMin(hfArea) - toMin(hiArea);
+                        let ocupadoMin = 0;
+                        resDelDia.forEach((r) => {
+                            ocupadoMin +=
+                                toMin(r.hora_fin) - toMin(r.hora_inicio);
+                        });
+                        return ocupadoMin >= totalMin ? 'reserved' : 'partial';
+                    };
+
                     const fd = new Date(year, month, 1).getDay();
                     const dim = new Date(year, month + 1, 0).getDate();
                     let cells = '';
@@ -3047,12 +3379,7 @@
                         cells += `<div class="text-center py-2"></div>`;
                     for (let day = 1; day <= dim; day++) {
                         const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                        const isRes = reservasAll.some(
-                            (r) =>
-                                r.fecha === dStr &&
-                                r.area === areaNombre &&
-                                r.estado !== 'cancelada',
-                        );
+                        const status = getDayStatus(dStr);
                         const past = dStr < meta.todayStr;
                         const isToday =
                             day === meta.todayDate &&
@@ -3060,15 +3387,19 @@
                             year === meta.todayYear;
                         const dc = past
                             ? 'opacity-40 cursor-not-allowed'
-                            : isRes
-                              ? 'reserved'
-                              : 'available';
+                            : status;
                         const tc = isToday ? 'today' : '';
+                        const icon =
+                            !past && status === 'reserved'
+                                ? '<span class="block text-[8px]">🔴</span>'
+                                : !past && status === 'partial'
+                                  ? '<span class="block text-[8px]">🟡</span>'
+                                  : '';
                         const click =
                             !past && !meta.isMoroso
-                                ? `onclick="document.getElementById('res-fecha').value='${dStr}'; document.querySelectorAll('.calendar-day').forEach(el=>el.classList.remove('ring-2','ring-primary')); this.classList.add('ring-2','ring-primary');"`
+                                ? `onclick="document.getElementById('res-fecha').value='${dStr}'; document.querySelectorAll('.calendar-day').forEach(el=>el.classList.remove('ring-2','ring-primary')); this.classList.add('ring-2','ring-primary'); app.actualizarHorasDisponibles();"`
                                 : '';
-                        cells += `<div class="calendar-day ${dc} ${tc} text-center py-2 rounded text-sm font-medium transition" ${click} title="${dStr}">${day}${isRes && !past ? '<span class="block text-[8px] text-red-500">🔴</span>' : ''}</div>`;
+                        cells += `<div class="calendar-day ${dc} ${tc} text-center py-2 rounded text-sm font-medium transition" ${click} title="${dStr}">${day}${icon}</div>`;
                     }
                     grid.innerHTML = cells;
                 },
