@@ -44,12 +44,23 @@ def reporte_financiero(request):
         round((morosos_count / total_residentes * 100), 1) if total_residentes else 0
     )
 
-    # Recaudación por mes (últimos 12 meses)
+    # Recaudación por mes — últimos 12 meses completos (incluye meses en cero)
     por_mes = defaultdict(float)
     for p in aprobados:
         mes = p.fecha_pago.strftime("%Y-%m")
         por_mes[mes] += float(p.monto)
-    meses_sorted = sorted(por_mes.items())[-12:]
+
+    now = timezone.localdate()
+    meses_12 = []
+    for i in range(11, -1, -1):
+        # retroceder i meses desde el mes actual
+        year = now.year
+        month = now.month - i
+        while month <= 0:
+            month += 12
+            year -= 1
+        clave = f"{year}-{month:02d}"
+        meses_12.append({"mes": clave, "total": por_mes.get(clave, 0.0)})
 
     # Lista de morosos
     lista_morosos = [
@@ -61,9 +72,10 @@ def reporte_financiero(request):
     ]
 
     # Mes anterior para calcular variación
-    now = timezone.localdate()
     mes_actual = now.strftime("%Y-%m")
-    mes_anterior = (now.replace(day=1) - timezone.timedelta(days=1)).strftime("%Y-%m")
+    prev_month = now.month - 1 or 12
+    prev_year = now.year if now.month > 1 else now.year - 1
+    mes_anterior = f"{prev_year}-{prev_month:02d}"
     total_actual = por_mes.get(mes_actual, 0)
     total_anterior = por_mes.get(mes_anterior, 0)
     variacion = (
@@ -81,7 +93,7 @@ def reporte_financiero(request):
             "morosos": morosos_count,
             "tasaMorosidad": tasa_morosidad,
             "listaMorosos": lista_morosos,
-            "recaudacionMensual": [{"mes": m, "total": t} for m, t in meses_sorted],
+            "recaudacionMensual": meses_12,
             "variacionMesAnterior": variacion,
             "fechaGeneracion": timezone.localtime(timezone.now()).strftime(
                 "%d/%m/%Y %H:%M"
