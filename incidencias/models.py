@@ -31,7 +31,7 @@ class Incidencia(models.Model):
     estado = models.CharField(max_length=15, choices=ESTADO_CHOICES)
     fecha_creacion = models.DateTimeField()
     fecha_cierre = models.DateTimeField(null=True, blank=True)
-    evidencia_url = models.TextField(null=True, blank=True)
+    evidencia = models.FileField(upload_to='evidencias/', null=True, blank=True)
     id_admin_asignado = models.ForeignKey(
         "usuarios.Administrador",
         null=True,

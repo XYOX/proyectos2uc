@@ -124,7 +124,14 @@ def build_timeline(incidencia):
     return timeline
 
 
-def serialize_incidencia(incidencia):
+def serialize_incidencia(incidencia, request=None):
+    evidencia_url = None
+    if incidencia.evidencia and incidencia.evidencia.name:
+        evidencia_url = (
+            request.build_absolute_uri(incidencia.evidencia.url)
+            if request
+            else incidencia.evidencia.url
+        )
     return {
         "id": incidencia.id,
         "residente_id": incidencia.id_residente.id_usuario_id,
@@ -135,6 +142,7 @@ def serialize_incidencia(incidencia):
         "estado": "asignada" if incidencia.estado == "asignado" else incidencia.estado,
         "fecha": timezone.localtime(incidencia.fecha_creacion).date().isoformat(),
         "asignado_a": incidencia.clasificacion_ia,
+        "evidencia_url": evidencia_url,
         "timeline": build_timeline(incidencia),
     }
 
@@ -150,7 +158,7 @@ def incidencias_view(request):
         if residente_id:
             incidencias = incidencias.filter(id_residente__id_usuario_id=residente_id)
         return Response(
-            [serialize_incidencia(incidencia) for incidencia in incidencias]
+            [serialize_incidencia(incidencia, request) for incidencia in incidencias]
         )
 
     residente = get_residente_by_user_id(request.data.get("residente_id"))
@@ -158,6 +166,21 @@ def incidencias_view(request):
         return Response(
             {"error": "Residente no encontrado."}, status=status.HTTP_404_NOT_FOUND
         )
+
+    # Validar evidencia (máx 5MB, formatos permitidos)
+    evidencia = request.FILES.get("evidencia")
+    if evidencia:
+        if evidencia.size > 5 * 1024 * 1024:
+            return Response(
+                {"error": "El archivo no debe superar los 5MB."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        ext = evidencia.name.rsplit(".", 1)[-1].lower()
+        if ext not in ["jpg", "jpeg", "png", "pdf"]:
+            return Response(
+                {"error": "Solo se permiten archivos JPG, PNG o PDF."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
     titulo = request.data.get("titulo", "")
     descripcion = request.data.get("descripcion", "")
@@ -171,8 +194,11 @@ def incidencias_view(request):
         estado="nuevo",
         fecha_creacion=timezone.now(),
         clasificacion_ia=razon_ia,
+        evidencia=evidencia,
     )
-    return Response(serialize_incidencia(incidencia), status=status.HTTP_201_CREATED)
+    return Response(
+        serialize_incidencia(incidencia, request), status=status.HTTP_201_CREATED
+    )
 
 
 @api_view(["PATCH"])
@@ -196,7 +222,7 @@ def asignar_incidencia(request, incidencia_id):
         estado_nuevo="asignado",
         fecha_registro=timezone.now(),
     )
-    return Response(serialize_incidencia(incidencia))
+    return Response(serialize_incidencia(incidencia, request))
 
 
 @api_view(["PATCH"])
@@ -220,4 +246,4 @@ def cerrar_incidencia(request, incidencia_id):
         estado_nuevo="cerrado",
         fecha_registro=timezone.now(),
     )
-    return Response(serialize_incidencia(incidencia))
+    return Response(serialize_incidencia(incidencia, request))

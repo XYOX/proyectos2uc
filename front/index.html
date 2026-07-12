@@ -1180,11 +1180,10 @@
                     return res.json();
                 },
 
-                registrarIncidencia: async (incData) => {
+                registrarIncidencia: async (formData) => {
                     const res = await authFetch(`${API_BASE}/incidencias/`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(incData),
+                        body: formData, // FormData — no poner Content-Type header
                     });
                     const data = await res.json();
                     if (!res.ok)
@@ -1920,6 +1919,27 @@
                                                 class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"></textarea>
                                             <p class="text-xs text-slate-500 mt-1">🤖 Gemini analizará el texto y asignará categoría y prioridad automáticamente.</p>
                                         </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-dark mb-1">Evidencia <span class="text-slate-400 font-normal">(opcional · JPG, PNG, PDF · máx 5MB)</span></label>
+                                            <label class="flex flex-col items-center justify-center w-full border-2 border-dashed border-slate-300 rounded-lg p-4 cursor-pointer hover:border-primary hover:bg-blue-50 transition-colors">
+                                                <i class="fa-solid fa-cloud-arrow-up text-2xl text-slate-400 mb-1"></i>
+                                                <span id="inc-file-label" class="text-xs text-slate-500">Haz clic para seleccionar</span>
+                                                <input type="file" id="inc-evidencia" accept=".jpg,.jpeg,.png,.pdf"
+                                                    class="hidden"
+                                                    onchange="
+                                                        const f=this.files[0];
+                                                        if(f){
+                                                            if(f.size>5*1024*1024){
+                                                                app.showToast('El archivo supera los 5MB','error');
+                                                                this.value='';
+                                                                document.getElementById('inc-file-label').textContent='Haz clic para seleccionar';
+                                                            } else {
+                                                                document.getElementById('inc-file-label').textContent=f.name;
+                                                            }
+                                                        }
+                                                    ">
+                                            </label>
+                                        </div>
                                         <button type="submit" class="w-full bg-primary hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
                                             <i class="fa-solid fa-robot mr-2"></i> Enviar con IA
                                         </button>
@@ -1944,6 +1964,22 @@
                                             <span class="bg-orange-50 text-orange-700 px-2 py-1 rounded border border-orange-100">Prioridad: ${i.prioridad_ia}</span>
                                             ${i.asignado_a ? `<span class="bg-green-50 text-green-700 px-2 py-1 rounded border border-green-100">👤 Asignado a: ${i.asignado_a}</span>` : ''}
                                         </div>
+                                        ${
+                                            i.evidencia_url
+                                                ? `
+                                        <div class="mb-3">
+                                            ${
+                                                i.evidencia_url.match(
+                                                    /\.(jpg|jpeg|png)$/i,
+                                                )
+                                                    ? `<img src="${i.evidencia_url}" alt="Evidencia" class="rounded-lg max-h-40 object-cover border border-slate-200">`
+                                                    : `<a href="${i.evidencia_url}" target="_blank" class="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                                                    <i class="fa-solid fa-file-pdf text-red-500"></i> Ver evidencia PDF
+                                                   </a>`
+                                            }
+                                        </div>`
+                                                : ''
+                                        }
                                         ${
                                             i.timeline
                                                 ? `
@@ -2464,12 +2500,15 @@
                             </span>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 fade-in">
-                            ${incidencias.length === 0
-                                ? `<div class="col-span-3 bg-white rounded-xl border border-slate-200 p-10 text-center text-slate-400">
+                            ${
+                                incidencias.length === 0
+                                    ? `<div class="col-span-3 bg-white rounded-xl border border-slate-200 p-10 text-center text-slate-400">
                                     <i class="fa-solid fa-circle-check text-4xl mb-3 block text-green-300"></i>
                                     No hay incidencias registradas.
                                    </div>`
-                                : incidencias.map((i) => `
+                                    : incidencias
+                                          .map(
+                                              (i) => `
                                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col hover:shadow-md transition">
                                     <div class="p-1 ${i.prioridad_ia === 'alta' ? 'bg-red-500' : i.prioridad_ia === 'media' ? 'bg-yellow-500' : 'bg-slate-800'} flex justify-center text-xs text-white uppercase tracking-wider font-semibold">
                                         🤖 IA: ${i.categoria_ia} | Prioridad: ${i.prioridad_ia}
@@ -2503,7 +2542,10 @@
                                         }
                                     </div>
                                 </div>
-                            `).join('')}
+                            `,
+                                          )
+                                          .join('')
+                            }
                         </div>
                     `;
                     }
@@ -3178,19 +3220,28 @@
                     e.preventDefault();
                     const titulo = document.getElementById('inc-titulo').value;
                     const desc = document.getElementById('inc-desc').value;
+                    const fileInput = document.getElementById('inc-evidencia');
                     const btn = e.target.querySelector('button');
                     const originalText = btn.innerHTML;
-                    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> 🤖 IA analizando...';
+                    btn.innerHTML =
+                        '<i class="fa-solid fa-circle-notch fa-spin"></i> 🤖 IA analizando...';
                     try {
-                        const inc = await apiService.registrarIncidencia({
-                            residente_id: app.currentUser.id,
-                            titulo,
-                            descripcion: desc,
-                        });
-                        app.showToast(`✅ Clasificado: ${inc.categoria_ia} · Prioridad ${inc.prioridad_ia}`);
+                        const fd = new FormData();
+                        fd.append('residente_id', app.currentUser.id);
+                        fd.append('titulo', titulo);
+                        fd.append('descripcion', desc);
+                        if (fileInput?.files[0])
+                            fd.append('evidencia', fileInput.files[0]);
+                        const inc = await apiService.registrarIncidencia(fd);
+                        app.showToast(
+                            `✅ Clasificado: ${inc.categoria_ia} · Prioridad ${inc.prioridad_ia}`,
+                        );
                         app.renderView('res_incidencias');
                     } catch (err) {
-                        app.showToast('Error de red', 'error');
+                        app.showToast(
+                            typeof err === 'string' ? err : 'Error al enviar',
+                            'error',
+                        );
                     } finally {
                         btn.innerHTML = originalText;
                     }
