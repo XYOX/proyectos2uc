@@ -9,7 +9,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from pagos.models import Pago
+from pagos.models import CuotaMantenimiento, Pago
 from usuarios.models import (
     Administrador,
     Invitacion,
@@ -17,6 +17,7 @@ from usuarios.models import (
     SolicitudRegistro,
     Usuario,
 )
+from comunicaciones.models import Notificacion
 
 chat_messages = []
 
@@ -98,6 +99,57 @@ def reporte_financiero(request):
             "fechaGeneracion": timezone.localtime(timezone.now()).strftime(
                 "%d/%m/%Y %H:%M"
             ),
+        }
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def reporte_cobranza(request):
+    hoy = timezone.localdate()
+    dias_prox = int(request.query_params.get("dias", 7))
+    limite_prox = hoy + timezone.timedelta(days=dias_prox)
+
+    cuotas = (
+        CuotaMantenimiento.objects.exclude(estado="pagado")
+        .select_related("id_residente__id_usuario")
+        .order_by("fecha_vencimiento")
+    )
+
+    vencidas = []
+    proximas = []
+
+    for c in cuotas:
+        item = {
+            "id": c.id,
+            "residente": c.id_residente.id_usuario.nombre,
+            "dpto": c.id_residente.nro_departamento,
+            "periodo": c.periodo,
+            "monto": float(c.monto),
+            "fecha_vencimiento": c.fecha_vencimiento.strftime("%d/%m/%Y"),
+            "dias_vencido": (
+                (hoy - c.fecha_vencimiento).days if c.fecha_vencimiento < hoy else 0
+            ),
+            "dias_para_vencer": (
+                (c.fecha_vencimiento - hoy).days if c.fecha_vencimiento >= hoy else 0
+            ),
+            "estado": c.estado,
+        }
+        if c.fecha_vencimiento < hoy:
+            vencidas.append(item)
+        elif c.fecha_vencimiento <= limite_prox:
+            proximas.append(item)
+
+    return Response(
+        {
+            "fecha": hoy.strftime("%d/%m/%Y"),
+            "diasProximidad": dias_prox,
+            "totalVencidas": len(vencidas),
+            "totalProximas": len(proximas),
+            "montoVencido": sum(v["monto"] for v in vencidas),
+            "montoProximo": sum(p["monto"] for p in proximas),
+            "vencidas": vencidas,
+            "proximas": proximas,
         }
     )
 
@@ -237,3 +289,48 @@ def chat_send(request):
     }
     chat_messages.append(entry)
     return Response(entry, status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def generar_alertas_morosidad(request):
+    hoy = timezone.localdate()
+
+    # Cuotas vencidas pendientes de pago
+    cuotas = CuotaMantenimiento.objects.filter(
+        estado__in=["pendiente", "vencido"],
+        fecha_vencimiento__lt=hoy,
+    ).select_related("id_residente__id_usuario")
+
+    creadas = 0
+    ya_existentes = 0
+
+    for cuota in cuotas:
+        residente = cuota.id_residente
+        mensaje = (
+            f"Tienes una cuota vencida del período {cuota.periodo} "
+            f"por S/ {cuota.monto:.2f} (venció el {cuota.fecha_vencimiento.strftime('%d/%m/%Y')}). "
+            f"Por favor regulariza tu pago a la brevedad."
+        )
+        # Evita duplicar alertas para la misma cuota
+        existe = Notificacion.objects.filter(
+            id_residente=residente,
+            tipo=f"morosidad_cuota_{cuota.id}",
+        ).exists()
+        if not existe:
+            Notificacion.objects.create(
+                id_residente=residente,
+                tipo=f"morosidad_cuota_{cuota.id}",
+                url_accion="#pagos",
+            )
+            creadas += 1
+        else:
+            ya_existentes += 1
+
+    return Response(
+        {
+            "alertas_creadas": creadas,
+            "ya_existentes": ya_existentes,
+            "total_cuotas_vencidas": cuotas.count(),
+        }
+    )
