@@ -17,36 +17,6 @@ def get_residente_by_user_id(user_id):
     )
 
 
-def _clasificar_por_palabras(descripcion):
-    """Clasificador de respaldo basado en palabras clave."""
-    texto = (descripcion or "").lower()
-    categoria = "otros"
-    prioridad = "baja"
-    if any(
-        p in texto
-        for p in [
-            "agua",
-            "foco",
-            "ascensor",
-            "luz",
-            "tubería",
-            "gotera",
-            "electricidad",
-        ]
-    ):
-        categoria = "mantenimiento"
-        prioridad = "media"
-    if any(
-        p in texto
-        for p in ["robo", "sospechoso", "puerta", "intruso", "amenaza", "violencia"]
-    ):
-        categoria = "seguridad"
-        prioridad = "alta"
-    elif any(p in texto for p in ["limpieza", "basura", "olor", "plaga"]):
-        categoria = "servicios"
-    return categoria, prioridad
-
-
 def clasificar_incidencia(titulo, descripcion):
     """
     Clasifica automáticamente la incidencia usando Gemini 2.5 Flash en modo JSON nativo.
@@ -60,8 +30,7 @@ def clasificar_incidencia(titulo, descripcion):
     api_key = getattr(settings, "GEMINI_API_KEY", "")
 
     if not api_key:
-        cat, pri = _clasificar_por_palabras(descripcion)
-        return cat, pri, None
+        raise ValueError("GEMINI_API_KEY no está configurada en el servidor.")
 
     instrucciones_sistema = """Eres un sistema experto en gestión de incidencias para condominios, siguiendo el marco ITIL 4.
 Responde estrictamente con un objeto JSON usando estas claves: "categoria", "prioridad" y "razon".
@@ -95,9 +64,8 @@ Prioridades válidas: baja, media, alta."""
         if prioridad not in ["baja", "media", "alta"]:
             prioridad = "baja"
         return categoria, prioridad, razon
-    except Exception:
-        cat, pri = _clasificar_por_palabras(descripcion)
-        return cat, pri, None
+    except Exception as e:
+        raise ValueError(f"Error al conectar con Gemini: {e}")
 
 
 def build_timeline(incidencia):
@@ -184,7 +152,10 @@ def incidencias_view(request):
 
     titulo = request.data.get("titulo", "")
     descripcion = request.data.get("descripcion", "")
-    categoria, prioridad, razon_ia = clasificar_incidencia(titulo, descripcion)
+    try:
+        categoria, prioridad, razon_ia = clasificar_incidencia(titulo, descripcion)
+    except ValueError as e:
+        return Response({"error": str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
     incidencia = Incidencia.objects.create(
         id_residente=residente,
         titulo=titulo,
