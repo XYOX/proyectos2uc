@@ -1,5 +1,9 @@
+import json
+
 from django.conf import settings
 from django.utils import timezone
+from google import genai
+from google.genai import types
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -23,10 +27,6 @@ def clasificar_incidencia(titulo, descripcion):
     Sigue lineamientos ITIL 4 para priorización.
     Retorna (categoria, prioridad, razon_ia).
     """
-    import json
-    from google import genai
-    from google.genai import types
-
     api_key = getattr(settings, "GEMINI_API_KEY", "")
 
     if not api_key:
