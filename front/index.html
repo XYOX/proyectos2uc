@@ -2442,38 +2442,85 @@
                         const r = await apiService.generarReporteFinanciero();
 
                         // Gráfico de barras: recaudación mensual
-                        const mesesES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+                        const mesesES = [
+                            'Ene',
+                            'Feb',
+                            'Mar',
+                            'Abr',
+                            'May',
+                            'Jun',
+                            'Jul',
+                            'Ago',
+                            'Sep',
+                            'Oct',
+                            'Nov',
+                            'Dic',
+                        ];
                         const todosLosMeses = r.recaudacionMensual || [];
                         window._reporteMeses = todosLosMeses;
-                        window._reporteData  = r;
+                        window._reporteData = r;
 
                         const renderBarChart = (meses) => {
-                            const maxVal = meses.length ? Math.max(...meses.map(m => m.total), 1) : 1;
-                            const BAR_COLORS = ['#3b82f6','#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#84cc16','#f97316','#14b8a6','#a78bfa'];
-                            const barras = meses.map((m, i) => {
-                                const pct   = Math.round((m.total / maxVal) * 100);
-                                const label = mesesES[parseInt(m.mes.split('-')[1]) - 1] + "'" + m.mes.split('-')[0].slice(2);
-                                const color = BAR_COLORS[i % BAR_COLORS.length];
-                                const barH  = Math.max(Math.round(pct * 2.6), 2);
-                                return `
+                            const maxVal = meses.length
+                                ? Math.max(...meses.map((m) => m.total), 1)
+                                : 1;
+                            const BAR_COLORS = [
+                                '#3b82f6',
+                                '#6366f1',
+                                '#8b5cf6',
+                                '#06b6d4',
+                                '#10b981',
+                                '#f59e0b',
+                                '#ef4444',
+                                '#ec4899',
+                                '#84cc16',
+                                '#f97316',
+                                '#14b8a6',
+                                '#a78bfa',
+                            ];
+                            const barras = meses
+                                .map((m, i) => {
+                                    const pct = Math.round(
+                                        (m.total / maxVal) * 100,
+                                    );
+                                    const label =
+                                        mesesES[
+                                            parseInt(m.mes.split('-')[1]) - 1
+                                        ] +
+                                        "'" +
+                                        m.mes.split('-')[0].slice(2);
+                                    const color =
+                                        BAR_COLORS[i % BAR_COLORS.length];
+                                    const barH = Math.max(
+                                        Math.round(pct * 2.6),
+                                        2,
+                                    );
+                                    return `
                                 <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;gap:0">
-                                    <span style="font-size:8px;color:#64748b;height:14px;line-height:14px">${m.total > 0 ? 'S/'+m.total.toFixed(0) : ''}</span>
+                                    <span style="font-size:8px;color:#64748b;height:14px;line-height:14px">${m.total > 0 ? 'S/' + m.total.toFixed(0) : ''}</span>
                                     <div style="flex:1;display:flex;align-items:flex-end;justify-content:center;width:100%">
                                         <div style="width:72%;height:${barH}px;border-radius:3px 3px 0 0;background:${color}"></div>
                                     </div>
                                     <span style="font-size:8px;color:#94a3b8;height:16px;line-height:16px;white-space:nowrap">${label}</span>
                                 </div>`;
-                            }).join('');
-                            const gridLines = [20,40,60,80,100].map(p => `
+                                })
+                                .join('');
+                            const gridLines = [20, 40, 60, 80, 100]
+                                .map(
+                                    (p) => `
                                 <div class="absolute w-full border-t border-slate-100" style="bottom:calc(${p}% * 260/320 + 24px)">
-                                    <span class="absolute -left-7 text-[8px] text-slate-300 -translate-y-1/2">S/${Math.round(maxVal*p/100)}</span>
-                                </div>`).join('');
+                                    <span class="absolute -left-7 text-[8px] text-slate-300 -translate-y-1/2">S/${Math.round((maxVal * p) / 100)}</span>
+                                </div>`,
+                                )
+                                .join('');
 
-                            const el = document.getElementById('bar-chart-area');
+                            const el =
+                                document.getElementById('bar-chart-area');
                             if (!el) return;
-                            el.innerHTML = meses.length === 0
-                                ? '<p class="text-slate-400 text-center py-16 w-full">Sin datos en este período</p>'
-                                : `<div class="relative pl-8 w-full">
+                            el.innerHTML =
+                                meses.length === 0
+                                    ? '<p class="text-slate-400 text-center py-16 w-full">Sin datos en este período</p>'
+                                    : `<div class="relative pl-8 w-full">
                                     <div class="absolute inset-0 pl-8 pointer-events-none">${gridLines}</div>
                                     <div class="flex w-full border-b border-l border-slate-200" style="height:320px;align-items:stretch;gap:2px;padding:0 4px">${barras}</div>
                                    </div>`;
@@ -2481,37 +2528,88 @@
 
                         window._renderBarChart = renderBarChart;
                         window._filtrarPeriodo = (btn, n) => {
-                            document.querySelectorAll('.periodo-btn').forEach(b => b.classList.remove('bg-primary','text-white'));
-                            document.querySelectorAll('.periodo-btn').forEach(b => b.classList.add('bg-slate-100','text-slate-600'));
-                            btn.classList.remove('bg-slate-100','text-slate-600');
-                            btn.classList.add('bg-primary','text-white');
+                            document
+                                .querySelectorAll('.periodo-btn')
+                                .forEach((b) =>
+                                    b.classList.remove(
+                                        'bg-primary',
+                                        'text-white',
+                                    ),
+                                );
+                            document
+                                .querySelectorAll('.periodo-btn')
+                                .forEach((b) =>
+                                    b.classList.add(
+                                        'bg-slate-100',
+                                        'text-slate-600',
+                                    ),
+                                );
+                            btn.classList.remove(
+                                'bg-slate-100',
+                                'text-slate-600',
+                            );
+                            btn.classList.add('bg-primary', 'text-white');
                             renderBarChart(window._reporteMeses.slice(-n));
                         };
 
                         const meses = todosLosMeses;
                         // Generar barras y gridlines iniciales (año completo)
-                        const { barrasHTML: barras, gridLinesHTML: gridLines } = (() => {
-                            const maxVal = meses.length ? Math.max(...meses.map(m => m.total), 1) : 1;
-                            const BAR_COLORS = ['#3b82f6','#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#84cc16','#f97316','#14b8a6','#a78bfa'];
-                            const barrasHTML = meses.map((m, i) => {
-                                const pct  = Math.round((m.total / maxVal) * 100);
-                                const label = mesesES[parseInt(m.mes.split('-')[1]) - 1] + "'" + m.mes.split('-')[0].slice(2);
-                                const color = BAR_COLORS[i % BAR_COLORS.length];
-                                const barH  = Math.max(Math.round(pct * 2.6), 2);
-                                return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;gap:0">
-                                    <span style="font-size:8px;color:#64748b;height:14px;line-height:14px">${m.total>0?'S/'+m.total.toFixed(0):''}</span>
+                        const { barrasHTML: barras, gridLinesHTML: gridLines } =
+                            (() => {
+                                const maxVal = meses.length
+                                    ? Math.max(...meses.map((m) => m.total), 1)
+                                    : 1;
+                                const BAR_COLORS = [
+                                    '#3b82f6',
+                                    '#6366f1',
+                                    '#8b5cf6',
+                                    '#06b6d4',
+                                    '#10b981',
+                                    '#f59e0b',
+                                    '#ef4444',
+                                    '#ec4899',
+                                    '#84cc16',
+                                    '#f97316',
+                                    '#14b8a6',
+                                    '#a78bfa',
+                                ];
+                                const barrasHTML = meses
+                                    .map((m, i) => {
+                                        const pct = Math.round(
+                                            (m.total / maxVal) * 100,
+                                        );
+                                        const label =
+                                            mesesES[
+                                                parseInt(m.mes.split('-')[1]) -
+                                                    1
+                                            ] +
+                                            "'" +
+                                            m.mes.split('-')[0].slice(2);
+                                        const color =
+                                            BAR_COLORS[i % BAR_COLORS.length];
+                                        const barH = Math.max(
+                                            Math.round(pct * 2.6),
+                                            2,
+                                        );
+                                        return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;gap:0">
+                                    <span style="font-size:8px;color:#64748b;height:14px;line-height:14px">${m.total > 0 ? 'S/' + m.total.toFixed(0) : ''}</span>
                                     <div style="flex:1;display:flex;align-items:flex-end;justify-content:center;width:100%">
                                         <div style="width:72%;height:${barH}px;border-radius:3px 3px 0 0;background:${color}"></div>
                                     </div>
                                     <span style="font-size:8px;color:#94a3b8;height:16px;line-height:16px;white-space:nowrap">${label}</span>
                                 </div>`;
-                            }).join('');
-                            const gridLinesHTML = [20,40,60,80,100].map(p => `
+                                    })
+                                    .join('');
+                                const gridLinesHTML = [20, 40, 60, 80, 100]
+                                    .map(
+                                        (p) => `
                                 <div class="absolute w-full border-t border-slate-100" style="bottom:calc(${p}% * 260/320 + 24px)">
-                                    <span class="absolute -left-7 text-[8px] text-slate-300 -translate-y-1/2">S/${Math.round(maxVal*p/100)}</span>
-                                </div>`).join('');
-                            return { barrasHTML, gridLinesHTML };
-                        })();
+                                    <span class="absolute -left-7 text-[8px] text-slate-300 -translate-y-1/2">S/${Math.round((maxVal * p) / 100)}</span>
+                                </div>`,
+                                    )
+                                    .join('');
+                                return { barrasHTML, gridLinesHTML };
+                            })();
 
                         // Dona CSS con conic-gradient
                         const total =
@@ -3090,53 +3188,117 @@
 
                     // --- Gráfico de barras en Canvas ---
                     const barImg = (() => {
-                        const W = 700, H = 260, PAD = 48, BAR_AREA_H = 190;
+                        const W = 700,
+                            H = 260,
+                            PAD = 48,
+                            BAR_AREA_H = 190;
                         const c = document.createElement('canvas');
-                        c.width = W; c.height = H;
+                        c.width = W;
+                        c.height = H;
                         const ctx = c.getContext('2d');
                         ctx.fillStyle = '#f8fafc';
                         ctx.fillRect(0, 0, W, H);
 
                         if (meses.length === 0) {
-                            ctx.fillStyle = '#94a3b8'; ctx.font = '14px Arial'; ctx.textAlign = 'center';
-                            ctx.fillText('Sin datos de pagos aún', W/2, H/2);
+                            ctx.fillStyle = '#94a3b8';
+                            ctx.font = '14px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText(
+                                'Sin datos de pagos aún',
+                                W / 2,
+                                H / 2,
+                            );
                             return c.toDataURL('image/png');
                         }
 
-                        const maxVal = Math.max(...meses.map(m => m.total), 1);
-                        const COLORS = ['#3b82f6','#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#84cc16','#f97316','#14b8a6','#a78bfa'];
+                        const maxVal = Math.max(
+                            ...meses.map((m) => m.total),
+                            1,
+                        );
+                        const COLORS = [
+                            '#3b82f6',
+                            '#6366f1',
+                            '#8b5cf6',
+                            '#06b6d4',
+                            '#10b981',
+                            '#f59e0b',
+                            '#ef4444',
+                            '#ec4899',
+                            '#84cc16',
+                            '#f97316',
+                            '#14b8a6',
+                            '#a78bfa',
+                        ];
 
                         // Líneas de cuadrícula horizontales
-                        [0.25, 0.5, 0.75, 1].forEach(pct => {
+                        [0.25, 0.5, 0.75, 1].forEach((pct) => {
                             const y = H - 32 - BAR_AREA_H * pct;
-                            ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
-                            ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - 12, y); ctx.stroke();
-                            ctx.fillStyle = '#94a3b8'; ctx.font = '9px Arial'; ctx.textAlign = 'right';
-                            ctx.fillText('S/'+Math.round(maxVal*pct), PAD - 6, y + 3);
+                            ctx.strokeStyle = '#e2e8f0';
+                            ctx.lineWidth = 1;
+                            ctx.beginPath();
+                            ctx.moveTo(PAD, y);
+                            ctx.lineTo(W - 12, y);
+                            ctx.stroke();
+                            ctx.fillStyle = '#94a3b8';
+                            ctx.font = '9px Arial';
+                            ctx.textAlign = 'right';
+                            ctx.fillText(
+                                'S/' + Math.round(maxVal * pct),
+                                PAD - 6,
+                                y + 3,
+                            );
                         });
 
                         // Ejes
-                        ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1.5;
-                        ctx.beginPath(); ctx.moveTo(PAD, 10); ctx.lineTo(PAD, H - 32); ctx.lineTo(W - 12, H - 32); ctx.stroke();
+                        ctx.strokeStyle = '#cbd5e1';
+                        ctx.lineWidth = 1.5;
+                        ctx.beginPath();
+                        ctx.moveTo(PAD, 10);
+                        ctx.lineTo(PAD, H - 32);
+                        ctx.lineTo(W - 12, H - 32);
+                        ctx.stroke();
 
                         const n = meses.length;
                         const slotW = (W - PAD - 12) / n;
                         // barra ancha: mínimo 60px, máximo 80% del slot
-                        const barW = Math.min(Math.max(slotW * 0.7, 60), slotW * 0.85);
+                        const barW = Math.min(
+                            Math.max(slotW * 0.7, 60),
+                            slotW * 0.85,
+                        );
 
                         meses.forEach((m, i) => {
                             const x = PAD + slotW * i + slotW / 2;
-                            const barH = Math.max((m.total / maxVal) * BAR_AREA_H, 4);
+                            const barH = Math.max(
+                                (m.total / maxVal) * BAR_AREA_H,
+                                4,
+                            );
                             const y = H - 32 - barH;
                             ctx.fillStyle = COLORS[i % COLORS.length];
-                            if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x - barW/2, y, barW, barH, [4,4,0,0]); ctx.fill(); }
-                            else { ctx.fillRect(x - barW/2, y, barW, barH); }
+                            if (ctx.roundRect) {
+                                ctx.beginPath();
+                                ctx.roundRect(
+                                    x - barW / 2,
+                                    y,
+                                    barW,
+                                    barH,
+                                    [4, 4, 0, 0],
+                                );
+                                ctx.fill();
+                            } else {
+                                ctx.fillRect(x - barW / 2, y, barW, barH);
+                            }
                             // valor encima
-                            ctx.fillStyle = '#1e293b'; ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center';
-                            ctx.fillText('S/'+m.total.toFixed(2), x, y - 6);
+                            ctx.fillStyle = '#1e293b';
+                            ctx.font = 'bold 11px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('S/' + m.total.toFixed(2), x, y - 6);
                             // label abajo
-                            const label = mesesES[parseInt(m.mes.split('-')[1])-1] + ' ' + m.mes.split('-')[0];
-                            ctx.fillStyle = '#64748b'; ctx.font = '10px Arial';
+                            const label =
+                                mesesES[parseInt(m.mes.split('-')[1]) - 1] +
+                                ' ' +
+                                m.mes.split('-')[0];
+                            ctx.fillStyle = '#64748b';
+                            ctx.font = '10px Arial';
                             ctx.fillText(label, x, H - 14);
                         });
                         return c.toDataURL('image/png');
@@ -3146,37 +3308,49 @@
                     const donaImg = (() => {
                         const SZ = 240;
                         const c = document.createElement('canvas');
-                        c.width = SZ; c.height = SZ;
+                        c.width = SZ;
+                        c.height = SZ;
                         const ctx = c.getContext('2d');
                         ctx.fillStyle = '#f8fafc';
                         ctx.fillRect(0, 0, SZ, SZ);
 
-                        const cx = SZ/2, cy = SZ/2, R = 100, rInner = 58;
-                        const aprobados  = r.cantidadPagos    || 0;
-                        const pendientes = r.pagosPendientes  || 0;
-                        const rechazados = r.pagosRechazados  || 0;
+                        const cx = SZ / 2,
+                            cy = SZ / 2,
+                            R = 100,
+                            rInner = 58;
+                        const aprobados = r.cantidadPagos || 0;
+                        const pendientes = r.pagosPendientes || 0;
+                        const rechazados = r.pagosRechazados || 0;
                         const segmentos = [
-                            { val: aprobados,  color: '#3b82f6' },
+                            { val: aprobados, color: '#3b82f6' },
                             { val: pendientes, color: '#f59e0b' },
                             { val: rechazados, color: '#ef4444' },
                         ];
                         let angle = -Math.PI / 2;
-                        segmentos.forEach(s => {
+                        segmentos.forEach((s) => {
                             if (s.val === 0) return;
                             const sweep = (s.val / total) * Math.PI * 2;
-                            ctx.beginPath(); ctx.moveTo(cx, cy);
+                            ctx.beginPath();
+                            ctx.moveTo(cx, cy);
                             ctx.arc(cx, cy, R, angle, angle + sweep);
-                            ctx.closePath(); ctx.fillStyle = s.color; ctx.fill();
+                            ctx.closePath();
+                            ctx.fillStyle = s.color;
+                            ctx.fill();
                             angle += sweep;
                         });
                         // hueco
-                        ctx.beginPath(); ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
-                        ctx.fillStyle = '#f8fafc'; ctx.fill();
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
+                        ctx.fillStyle = '#f8fafc';
+                        ctx.fill();
                         // texto central
-                        ctx.fillStyle = '#1e293b'; ctx.font = 'bold 18px Arial';
-                        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                        ctx.fillStyle = '#1e293b';
+                        ctx.font = 'bold 18px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
                         ctx.fillText(total, cx, cy - 8);
-                        ctx.font = '11px Arial'; ctx.fillStyle = '#64748b';
+                        ctx.font = '11px Arial';
+                        ctx.fillStyle = '#64748b';
                         ctx.fillText('total', cx, cy + 12);
                         return c.toDataURL('image/png');
                     })();
